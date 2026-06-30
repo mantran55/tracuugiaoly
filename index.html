@@ -142,6 +142,20 @@
             pointer-events: none;
         }
 
+        .state-image{
+    display:flex;
+    justify-content:center;
+    margin:0 auto 18px;
+}
+
+.state-image img{
+    width:260px;
+    max-width:100%;
+    height:auto;
+    border-radius:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+}
+
         .header::after {
             content: '';
             position: absolute;
@@ -628,6 +642,9 @@
                 1px  1px 0 #fff;
         }
 
+        
+        
+
         .profile-role {
             font-size: 13px;
             color: var(--text-muted);
@@ -637,6 +654,26 @@
             align-items: center;
             gap: 6px;
         }
+
+        .search-form{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.search-input-wrap{
+    flex:1;
+    position:relative;
+}
+
+.search-form input{
+    width:100%;
+    padding:16px 20px 16px 48px;
+    border:none;
+    background:transparent;
+    font-size:15px;
+    outline:none;
+}
 
         .profile-role .role-dot {
             width: 6px; height: 6px;
@@ -1179,7 +1216,7 @@
             <form class="search-form" id="searchForm">
                 <div class="search-input-wrap">
                     <span class="material-icons-round search-icon">search</span>
-                    <input type="text" id="studentId" placeholder="Nhập mã học viên trên thẻ..." required autocomplete="off">
+                    <input type="text" id="studentId" placeholder="Nhập mã học viên trên thẻ..." required autocomplete="on">
                 </div>
                 <button type="submit">
                     <span class="material-icons-round">manage_search</span>
@@ -1190,11 +1227,14 @@
 
         <div id="result">
             <div class="state-box">
-                <div class="state-illustration">
-                    <span class="material-icons-round">badge</span>
+                <div class="state-image">
+                    <img src="hd.jpg" alt="Hướng dẫn tra cứu">
                 </div>
-                <div class="state-text">Nhập mã học viên trên thẻ để tra cứu</div>
-            </div>
+
+                <div class="state-text">
+                    Nhập mã học viên trên thẻ để tra cứu
+                </div>
+        </div>
         </div>
 
         <footer class="footer">
@@ -1313,7 +1353,7 @@
 
             /* Dữ liệu điểm */
             const scores = data.scores || {};
-            const hasScores = scores.ghkiScore || scores.chkiScore || scores.ghkiiScore || scores.chkiiScore;
+            
 
             result.innerHTML = `
 
@@ -1405,7 +1445,7 @@
                 </div>
             </section>
 
-            ${hasScores ? `
+          
             <!-- DIVIDER -->
             <div class="section-divider">
                 <div class="divider-diamond"></div>
@@ -1474,7 +1514,7 @@
                     </table>
                 </div>
             </section>
-            ` : ''}
+            
 
             `;
 
