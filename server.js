@@ -62,12 +62,16 @@ function googleDateToString(serial) {
 
 async function loadSheetData() {
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: "service-account.json",
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets.readonly"
-    ]
-  });
+  const credentials = JSON.parse(
+  process.env.GOOGLE_CREDENTIALS
+);
+
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: [
+    "https://www.googleapis.com/auth/spreadsheets.readonly"
+  ]
+});
 
   const sheets = google.sheets({
     version: "v4",
