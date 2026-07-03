@@ -50,10 +50,15 @@ function googleDateToString(serial) {
 // CORE: Đọc Google Sheet
 // =========================
 async function loadSheetData() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: "service-account.json",
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-  });
+  const credentials =
+  JSON.parse(process.env.GOOGLE_CREDENTIALS);
+
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: [
+    "https://www.googleapis.com/auth/spreadsheets"
+  ]
+});
 
   const sheets = google.sheets({ version: "v4", auth });
 
@@ -567,17 +572,15 @@ function columnLetter(col) {
 }
 
 async function getSheetsClient() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: "service-account.json",
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets"
-    ]
-  });
+  const credentials =
+  JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-  return google.sheets({
-    version: "v4",
-    auth
-  });
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: [
+    "https://www.googleapis.com/auth/spreadsheets"
+  ]
+});
 }
 
 
