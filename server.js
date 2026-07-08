@@ -187,6 +187,77 @@ async function getCCAMSData(phone, studentId) {
   return { totalMass, catechism, adoration, attendance };
 }
 
+app.post("/import-attendance-range", async (req, res) => {
+
+    try {
+
+        const {
+            fromDate,
+            toDate,
+            classId
+        } = req.body;
+
+        const start =
+            new Date(fromDate);
+
+        const end =
+            new Date(toDate);
+
+        const results = [];
+
+        for (
+            let d = new Date(start);
+            d <= end;
+            d.setDate(d.getDate() + 1)
+        ) {
+
+            const currentDate =
+                new Date(
+                    d.getTime() -
+                    d.getTimezoneOffset() * 60000
+                )
+                .toISOString()
+                .split("T")[0];
+
+            try {
+
+                const result =
+                    await importAttendance(
+                        currentDate,
+                        classId
+                    );
+
+                results.push({
+                    date: currentDate,
+                    count: result.count
+                });
+
+            } catch (err) {
+
+                results.push({
+                    date: currentDate,
+                    count: 0
+                });
+
+            }
+        }
+
+        res.json({
+            success: true,
+            results
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
+});
+
 app.post("/import-attendance", async (req,res)=>{
 
     try{
