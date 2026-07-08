@@ -519,6 +519,115 @@ app.get("/today-attendance", async (req, res) => {
   }
 });
 
+app.get("/attendance-report", async (req, res) => {
+
+    try {
+
+        await getSheetData();
+
+        const className =
+            String(req.query.className || "").trim();
+
+        const date =
+            String(req.query.date || "").trim();
+
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu ngày"
+            });
+        }
+
+        const sheets =
+            await getSheetsClient();
+
+        const headerRes =
+            await sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${ATTENDANCE_SHEET}!1:3`
+            });
+
+        const headers =
+            headerRes.data.values?.[2] || [];
+
+        const dateCol =
+            headers.findIndex(
+                h => String(h).trim() === date
+            );
+
+        if (dateCol === -1) {
+            return res.json({
+                success: false,
+                message: `Không tìm thấy cột ${date}`
+            });
+        }
+
+        const students =
+            Object.values(studentMap)
+            .filter(row => {
+
+                if (!className) return true;
+
+                return (
+                    String(row[3] || "").trim()
+                    === className
+                );
+
+            })
+            .map(row => {
+
+                const mark =
+                    String(
+                        row[dateCol] || ""
+                    )
+                    .trim()
+                    .toUpperCase();
+
+                return {
+
+                    studentId:
+                        row[1] || "",
+
+                    name:
+                        row[2] || "",
+
+                    className:
+                        row[3] || "",
+
+                    status:
+                        statusMap[
+                            String(row[1] || "").trim()
+                        ] || "",
+
+                    mark,
+
+                    tl:
+                        mark === "C" ||
+                        mark === "CG",
+
+                    gl:
+                        mark === "G" ||
+                        mark === "CG"
+                };
+
+            });
+
+        res.json({
+            success: true,
+            total: students.length,
+            students
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
+});
 
 // =========================
 // API: Refresh Cache
