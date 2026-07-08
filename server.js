@@ -1,5 +1,6 @@
 const ATTENDANCE_SHEET = "Thánh Lễ";
 const SCORE_SHEET = "Điểm";
+const STATUS_SHEET = "Tình Trạng";
 const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis");
@@ -29,6 +30,7 @@ let cacheData = null;
 let cacheTimestamp = 0;
 let studentMap = {};
 let scoreMap = {};
+let statusMap = {};
 
 
 // =========================
@@ -62,24 +64,37 @@ const auth = new google.auth.GoogleAuth({
 
   const sheets = google.sheets({ version: "v4", auth });
 
-  const [attendanceResponse, scoreResponse] = await Promise.all([
-    sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ATTENDANCE_SHEET}!A:ZZ`,
-      valueRenderOption: "UNFORMATTED_VALUE"
-    }),
-    sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SCORE_SHEET}!A:L`,
-      valueRenderOption: "UNFORMATTED_VALUE"
-    })
+  const [
+    attendanceResponse,
+    scoreResponse,
+    statusResponse
+  ] = await Promise.all([
+      sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${ATTENDANCE_SHEET}!A:ZZ`,
+          valueRenderOption: "UNFORMATTED_VALUE"
+      }),
+
+      sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${SCORE_SHEET}!A:L`,
+          valueRenderOption: "UNFORMATTED_VALUE"
+      }),
+
+      sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${STATUS_SHEET}!A:E`
+      })
   ]);
 
   const rows = attendanceResponse.data.values || [];
   const scoreRows = scoreResponse.data.values || [];
+  const statusRows =
+    statusResponse.data.values || [];
 
   const tempStudentMap = {};
   const tempScoreMap = {};
+  const tempStatusMap = {};
 
   // Map data học sinh (bắt đầu từ dòng 4 -> index 3)
   for (let i = 3; i < rows.length; i++) {
@@ -102,12 +117,30 @@ const auth = new google.auth.GoogleAuth({
       };
     }
   }
+  for (let i = 3; i < statusRows.length; i++) {
+
+    const studentId =
+        String(statusRows[i][1] || "")
+        .trim();
+
+    const status =
+        String(statusRows[i][4] || "")
+        .trim();
+
+    if (studentId) {
+
+        tempStatusMap[studentId] =
+            status;
+
+    }
+}
 
   // Cập nhật Cache
   cacheData = rows;
   cacheTimestamp = Date.now();
   studentMap = tempStudentMap;
   scoreMap = tempScoreMap;
+  statusMap = tempStatusMap;
 
   console.log(`📥 Reload Sheet thành công (${Object.keys(studentMap).length} học sinh)`);
   return rows;
@@ -314,6 +347,8 @@ app.get("/student/:id", async (req, res) => {
       studentId: studentRow[1] || "",
       name: studentRow[2] || "",
       className: studentRow[3] || "",
+      status:
+      statusMap[studentId] || "",
       avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
       totalMass: ccamsData.totalMass,
       catechism: ccamsData.catechism,
@@ -340,7 +375,11 @@ app.get("/students", async (req, res) => {
         studentId: row[1] || "",
         name: row[2] || "",
         className: row[3] || "",
-        phone: row[4] || ""
+        phone: row[4] || "",
+        status:
+            statusMap[
+                String(row[1] || "").trim()
+            ] || ""
     }));
 
     res.json({ success: true, total: students.length, students });
@@ -370,9 +409,13 @@ app.get("/student-summary", async (req, res) => {
         name: row[2] || "",
         className: row[3] || "",
         totalMass: Number(row[5] || 0),
-        catechism: Number(row[8] || 0)
-    }));
+        catechism: Number(row[8] || 0),
 
+        status:
+            statusMap[
+                String(row[1] || "").trim()
+            ] || ""
+    }));
     res.json({
       success: true,
       total: students.length,
@@ -438,8 +481,12 @@ app.get("/today-attendance", async (req, res) => {
       const student = {
         studentId: row[1] || "",
         name: row[2] || "",
-        className: row[3] || ""
-      };
+        className: row[3] || "",
+        status:
+            statusMap[
+                String(row[1] || "").trim()
+            ] || ""
+    };
 
       // Có mặt nếu là C hoặc CG
       if (value === "C" || value === "CG") {
