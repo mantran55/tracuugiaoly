@@ -18,7 +18,10 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-const SPREADSHEET_ID = "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E";
+const SHEET_GROUPS = {
+  "2b": "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E",
+  "1e": "1Fziw9eSbGjA-TLkSqpVbas5gFa9fkwsECLNeb_j11Ww"
+};
 
 // =========================
 // CACHE CONFIG
@@ -26,11 +29,29 @@ const SPREADSHEET_ID = "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E";
 const CACHE_DURATION = 60 * 1000; // 60 giây cho Sheet
 
 
-let cacheData = null;
-let cacheTimestamp = 0;
-let studentMap = {};
-let scoreMap = {};
-let statusMap = {};
+const sheetStates = Object.fromEntries(
+  Object.keys(SHEET_GROUPS).map(group => [group, {
+    cacheData: null,
+    cacheTimestamp: 0,
+    studentMap: {},
+    scoreMap: {},
+    statusMap: {}
+  }])
+);
+
+function getGroup(req) {
+  const group = String(req.query.group || "").trim().toLowerCase();
+  if (!SHEET_GROUPS[group]) {
+    const error = new Error("Nhóm lớp không hợp lệ");
+    error.status = 400;
+    throw error;
+  }
+  return group;
+}
+
+function getState(group) {
+  return sheetStates[group];
+}
 
 
 // =========================
@@ -51,7 +72,9 @@ function googleDateToString(serial) {
 // =========================
 // CORE: Đọc Google Sheet
 // =========================
-async function loadSheetData() {
+async function loadSheetData(group) {
+  const spreadsheetId = SHEET_GROUPS[group];
+  const state = getState(group);
   const credentials =
   JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
@@ -70,19 +93,19 @@ const auth = new google.auth.GoogleAuth({
     statusResponse
   ] = await Promise.all([
       sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
+          spreadsheetId,
           range: `${ATTENDANCE_SHEET}!A:ZZ`,
           valueRenderOption: "UNFORMATTED_VALUE"
       }),
 
       sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
+          spreadsheetId,
           range: `${SCORE_SHEET}!A:L`,
           valueRenderOption: "UNFORMATTED_VALUE"
       }),
 
       sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
+          spreadsheetId,
           range: `${STATUS_SHEET}!A:E`
       })
   ]);
@@ -136,21 +159,22 @@ const auth = new google.auth.GoogleAuth({
 }
 
   // Cập nhật Cache
-  cacheData = rows;
-  cacheTimestamp = Date.now();
-  studentMap = tempStudentMap;
-  scoreMap = tempScoreMap;
-  statusMap = tempStatusMap;
+  state.cacheData = rows;
+  state.cacheTimestamp = Date.now();
+  state.studentMap = tempStudentMap;
+  state.scoreMap = tempScoreMap;
+  state.statusMap = tempStatusMap;
 
-  console.log(`📥 Reload Sheet thành công (${Object.keys(studentMap).length} học sinh)`);
+  console.log(`📥 Reload Sheet ${group} thành công (${Object.keys(state.studentMap).length} học sinh)`);
   return rows;
 }
 
-async function getSheetData() {
-  if (cacheData && Date.now() - cacheTimestamp < CACHE_DURATION) {
-    return cacheData;
+async function getSheetData(group) {
+  const state = getState(group);
+  if (state.cacheData && Date.now() - state.cacheTimestamp < CACHE_DURATION) {
+    return state.cacheData;
   }
-  return await loadSheetData();
+  return await loadSheetData(group);
 }
 
 // =========================
@@ -223,6 +247,7 @@ async function getCCAMSData(phone, studentId) {
 app.post("/import-attendance-range", async (req, res) => {
 
     try {
+        const group = getGroup(req);
 
         const {
             fromDate,
@@ -257,7 +282,8 @@ app.post("/import-attendance-range", async (req, res) => {
                 const result =
                     await importAttendance(
                         currentDate,
-                        classId
+                        classId,
+                        group
                     );
 
                 results.push({
@@ -294,6 +320,7 @@ app.post("/import-attendance-range", async (req, res) => {
 app.post("/import-attendance", async (req,res)=>{
 
     try{
+        const group = getGroup(req);
 
         const {
             date,
@@ -301,7 +328,7 @@ app.post("/import-attendance", async (req,res)=>{
         } = req.body;
 
         const result =
-            await importAttendance(date,classId);
+            await importAttendance(date, classId, group);
 
         res.json({
             success:true,
@@ -325,9 +352,24 @@ app.post("/import-attendance", async (req,res)=>{
 app.get("/student/:id", async (req, res) => {
   try {
     const studentId = req.params.id.toString().trim();
-    await getSheetData();
+    const requestedGroup = String(req.query.group || "").trim().toLowerCase();
+    const groups = requestedGroup ? [getGroup(req)] : Object.keys(SHEET_GROUPS);
 
-    const studentRow = studentMap[studentId];
+    let group = null;
+    let state = null;
+    let studentRow = null;
+
+    for (const candidate of groups) {
+      await getSheetData(candidate);
+      const candidateState = getState(candidate);
+      if (candidateState.studentMap[studentId]) {
+        group = candidate;
+        state = candidateState;
+        studentRow = candidateState.studentMap[studentId];
+        break;
+      }
+    }
+
     if (!studentRow) {
       return res.json({ success: false, message: "Không tìm thấy học sinh" });
     }
@@ -340,7 +382,7 @@ app.get("/student/:id", async (req, res) => {
         phone,
         studentId
       );
-    const score = scoreMap[studentId] || {};
+    const score = state.scoreMap[studentId] || {};
 
     return res.json({
       success: true,
@@ -348,7 +390,8 @@ app.get("/student/:id", async (req, res) => {
       name: studentRow[2] || "",
       className: studentRow[3] || "",
       status:
-      statusMap[studentId] || "",
+      state.statusMap[studentId] || "",
+      group,
       avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
       totalMass: ccamsData.totalMass,
       catechism: ccamsData.catechism,
@@ -368,8 +411,10 @@ app.get("/student/:id", async (req, res) => {
 // =========================
 app.get("/students", async (req, res) => {
   try {
-    await getSheetData();
-    const students = Object.values(studentMap)
+    const group = getGroup(req);
+    await getSheetData(group);
+    const state = getState(group);
+    const students = Object.values(state.studentMap)
       .sort((a, b) => a._rowNumber - b._rowNumber)
       .map(row => ({
         studentId: row[1] || "",
@@ -377,7 +422,7 @@ app.get("/students", async (req, res) => {
         className: row[3] || "",
         phone: row[4] || "",
         status:
-            statusMap[
+            state.statusMap[
                 String(row[1] || "").trim()
             ] || ""
     }));
@@ -400,9 +445,11 @@ app.get("/students", async (req, res) => {
 
 app.get("/student-summary", async (req, res) => {
   try {
-    await getSheetData();
+    const group = getGroup(req);
+    await getSheetData(group);
+    const state = getState(group);
 
-    const students = Object.values(studentMap)
+    const students = Object.values(state.studentMap)
       .sort((a, b) => a._rowNumber - b._rowNumber)
       .map(row => ({
         studentId: row[1] || "",
@@ -412,7 +459,7 @@ app.get("/student-summary", async (req, res) => {
         catechism: Number(row[8] || 0),
 
         status:
-            statusMap[
+            state.statusMap[
                 String(row[1] || "").trim()
             ] || ""
     }));
@@ -433,15 +480,18 @@ app.get("/student-summary", async (req, res) => {
 
 app.get("/today-attendance", async (req, res) => {
   try {
+    const group = getGroup(req);
+    const spreadsheetId = SHEET_GROUPS[group];
+    const state = getState(group);
 
     // Luôn lấy dữ liệu mới nhất
-    await loadSheetData();
+    await loadSheetData(group);
 
     const sheets = await getSheetsClient();
 
     const headerRes =
       await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId,
         range: `${ATTENDANCE_SHEET}!1:3`
       });
 
@@ -471,7 +521,7 @@ app.get("/today-attendance", async (req, res) => {
     const presentStudents = [];
     const absentStudents = [];
 
-    Object.values(studentMap).forEach(row => {
+    Object.values(state.studentMap).forEach(row => {
 
       const value =
         String(row[dateCol] || "")
@@ -483,7 +533,7 @@ app.get("/today-attendance", async (req, res) => {
         name: row[2] || "",
         className: row[3] || "",
         status:
-            statusMap[
+            state.statusMap[
                 String(row[1] || "").trim()
             ] || ""
     };
@@ -522,8 +572,11 @@ app.get("/today-attendance", async (req, res) => {
 app.get("/attendance-report", async (req, res) => {
 
     try {
+        const group = getGroup(req);
+        const spreadsheetId = SHEET_GROUPS[group];
+        const state = getState(group);
 
-        await getSheetData();
+        await getSheetData(group);
 
         const className =
             String(req.query.className || "").trim();
@@ -543,7 +596,7 @@ app.get("/attendance-report", async (req, res) => {
 
         const headerRes =
             await sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
+                spreadsheetId,
                 range: `${ATTENDANCE_SHEET}!1:3`
             });
 
@@ -563,7 +616,7 @@ app.get("/attendance-report", async (req, res) => {
         }
 
         const students =
-            Object.values(studentMap)
+            Object.values(state.studentMap)
             .filter(row => {
 
                 if (!className) return true;
@@ -595,7 +648,7 @@ app.get("/attendance-report", async (req, res) => {
                         row[3] || "",
 
                     status:
-                        statusMap[
+                        state.statusMap[
                             String(row[1] || "").trim()
                         ] || "",
 
@@ -634,10 +687,15 @@ app.get("/attendance-report", async (req, res) => {
 // =========================
 app.get("/refresh-cache", async (req, res) => {
   try {
-    cacheData = null; cacheTimestamp = 0;
-    studentMap = {}; scoreMap = {};
+    const group = getGroup(req);
+    const state = getState(group);
+    state.cacheData = null;
+    state.cacheTimestamp = 0;
+    state.studentMap = {};
+    state.scoreMap = {};
+    state.statusMap = {};
     
-    await loadSheetData();
+    await loadSheetData(group);
     return res.json({ success: true, message: "Cache refreshed" });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -661,9 +719,11 @@ function formatDateVN(dateStr) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-async function importAttendance(date, classId) {
+async function importAttendance(date, classId, group) {
 
   const sheets = await getSheetsClient();
+  const spreadsheetId = SHEET_GROUPS[group];
+  const state = getState(group);
 
   const attendance =
     await getAttendanceByClass(
@@ -679,7 +739,7 @@ async function importAttendance(date, classId) {
 
   const headerRes =
     await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId,
       range: `${ATTENDANCE_SHEET}!1:3`
     });
 
@@ -716,7 +776,7 @@ async function importAttendance(date, classId) {
   attendance.forEach(item => {
 
     const student =
-      studentMap[item.studentId];
+      state.studentMap[item.studentId];
 
     if (!student) return;
 
@@ -731,7 +791,7 @@ async function importAttendance(date, classId) {
   if (updates.length) {
 
     await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId,
       requestBody: {
         valueInputOption: "RAW",
         data: updates
@@ -740,7 +800,7 @@ async function importAttendance(date, classId) {
 
   }
 
-  await loadSheetData();
+  await loadSheetData(group);
 
   return {
     count: updates.length,
@@ -752,12 +812,14 @@ async function importAttendance(date, classId) {
 app.get("/classes", async (req, res) => {
 
   try {
+    const group = getGroup(req);
 
-    await getSheetData();
+    await getSheetData(group);
+    const state = getState(group);
 
     const sheetClasses =
       [...new Set(
-        Object.values(studentMap)
+        Object.values(state.studentMap)
           .map(r => String(r[3] || "").trim())
           .filter(Boolean)
       )];
@@ -821,8 +883,7 @@ async function getSheetsClient() {
 // =========================
 app.listen(PORT, async () => {
   try {
-    // CHỈ load Sheet khi khởi động. KHÔNG await rebuildSummaryCache() để server không bị treo
-    await loadSheetData();
+    await Promise.all(Object.keys(SHEET_GROUPS).map(loadSheetData));
     
     // Cho phép rebuild summary chạy ngầm sau khi server đã start
     
