@@ -35,7 +35,8 @@ const sheetStates = Object.fromEntries(
     cacheTimestamp: 0,
     studentMap: {},
     scoreMap: {},
-    statusMap: {}
+    statusMap: {},
+    statusRowMap: {}
   }])
 );
 
@@ -118,6 +119,7 @@ const auth = new google.auth.GoogleAuth({
   const tempStudentMap = {};
   const tempScoreMap = {};
   const tempStatusMap = {};
+  const tempStatusRowMap = {};
 
   // Map data học sinh (bắt đầu từ dòng 4 -> index 3)
   for (let i = 3; i < rows.length; i++) {
@@ -152,8 +154,8 @@ const auth = new google.auth.GoogleAuth({
 
     if (studentId) {
 
-        tempStatusMap[studentId] =
-            status;
+        tempStatusMap[studentId] = status;
+        tempStatusRowMap[studentId] = i + 1;
 
     }
 }
@@ -164,6 +166,7 @@ const auth = new google.auth.GoogleAuth({
   state.studentMap = tempStudentMap;
   state.scoreMap = tempScoreMap;
   state.statusMap = tempStatusMap;
+  state.statusRowMap = tempStatusRowMap;
 
   console.log(`📥 Reload Sheet ${group} thành công (${Object.keys(state.studentMap).length} học sinh)`);
   return rows;
@@ -402,6 +405,55 @@ app.get("/student/:id", async (req, res) => {
 
   } catch (err) {
     console.error("Lỗi /student/:id :", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
+// API: Cập nhật tình trạng học viên
+// =========================
+app.put("/student/:id/status", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const studentId = String(req.params.id || "").trim();
+    const status = String(req.body.status || "").trim();
+    const allowedStatuses = ["đang học", "nghỉ ngang", "nghỉ từ đầu", "chuyển xứ", "nợ bài"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Tình trạng không hợp lệ" });
+    }
+
+    await getSheetData(group);
+    const state = getState(group);
+    if (!state.studentMap[studentId]) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy học viên" });
+    }
+
+    const sheets = await getSheetsClient();
+    const spreadsheetId = SHEET_GROUPS[group];
+    const statusRow = state.statusRowMap[studentId];
+
+    if (statusRow) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${STATUS_SHEET}!E${statusRow}`,
+        valueInputOption: "RAW",
+        requestBody: { values: [[status]] }
+      });
+    } else {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${STATUS_SHEET}!A:E`,
+        valueInputOption: "RAW",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [["", studentId, "", "", status]] }
+      });
+    }
+
+    await loadSheetData(group);
+    return res.json({ success: true, studentId, status });
+  } catch (err) {
+    console.error("Lỗi cập nhật tình trạng:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -694,6 +746,7 @@ app.get("/refresh-cache", async (req, res) => {
     state.studentMap = {};
     state.scoreMap = {};
     state.statusMap = {};
+    state.statusRowMap = {};
     
     await loadSheetData(group);
     return res.json({ success: true, message: "Cache refreshed" });
