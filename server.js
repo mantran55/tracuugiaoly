@@ -304,9 +304,21 @@ app.post("/import-attendance-range", async (req, res) => {
             }
         }
 
+        const lastUpdated = formatShortDateVN(toDate);
+        const sheets = await getSheetsClient();
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_GROUPS[group],
+            range: `${ATTENDANCE_SHEET}!G1`,
+            valueInputOption: "RAW",
+            requestBody: {
+                values: [[`cập nhật gần đây: ${lastUpdated}`]]
+            }
+        });
+
         res.json({
             success: true,
-            results
+            results,
+            lastUpdated: `cập nhật gần đây: ${lastUpdated}`
         });
 
     } catch (err) {
@@ -333,9 +345,21 @@ app.post("/import-attendance", async (req,res)=>{
         const result =
             await importAttendance(date, classId, group);
 
+        const lastUpdated = formatShortDateVN(date);
+        const sheets = await getSheetsClient();
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_GROUPS[group],
+            range: `${ATTENDANCE_SHEET}!G1`,
+            valueInputOption: "RAW",
+            requestBody: {
+                values: [[`cập nhật gần đây: ${lastUpdated}`]]
+            }
+        });
+
         res.json({
             success:true,
-            ...result
+            ...result,
+            lastUpdated: `cập nhật gần đây: ${lastUpdated}`
         });
 
     }catch(err){
@@ -526,6 +550,25 @@ app.get("/student-summary", async (req, res) => {
       success: false,
       error: err.message
     });
+  }
+});
+
+// =========================
+// API: Mốc cập nhật điểm danh gần nhất
+// =========================
+app.get("/attendance-last-updated", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const sheets = await getSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_GROUPS[group],
+      range: `${ATTENDANCE_SHEET}!G1`
+    });
+
+    const lastUpdated = String(response.data.values?.[0]?.[0] || "Chưa có lần cập nhật nào").trim();
+    return res.json({ success: true, lastUpdated });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -770,6 +813,12 @@ function formatDateVN(dateStr) {
   const yyyy = d.getFullYear();
 
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatShortDateVN(dateStr) {
+  const [year, month, day] = String(dateStr || "").split("-");
+  if (!year || !month || !day) return "";
+  return `${day}/${month}`;
 }
 
 async function importAttendance(date, classId, group) {
