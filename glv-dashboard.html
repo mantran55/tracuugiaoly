@@ -4616,14 +4616,20 @@ button.btn-report {
             const absent =
                 students.length - present;
 
+            const sortedStudents = [...students].sort((a, b) => {
+                const lastName = name => String(name || '').trim().split(/\s+/).pop() || '';
+                const lastNameCompare = lastName(a.name).localeCompare(lastName(b.name), 'vi', { sensitivity: 'base' });
+                return lastNameCompare || String(a.name || '').localeCompare(String(b.name || ''), 'vi', { sensitivity: 'base' });
+            });
+
             const half =
-                Math.ceil(students.length / 2);
+                Math.ceil(sortedStudents.length / 2);
 
             const leftStudents =
-                students.slice(0, half);
+                sortedStudents.slice(0, half);
 
             const rightStudents =
-                students.slice(half);
+                sortedStudents.slice(half);
 
             const renderRows = (list,startIndex=0)=>
 
@@ -4636,11 +4642,12 @@ button.btn-report {
                             : ''
                         }
                     ">
-                        <td>${startIndex + i + 1}</td>
+                        <td style="text-align:center;vertical-align:middle;">${startIndex + i + 1}</td>
 
                         <td style="
                             text-align:left;
                             padding-left:10px;
+                            font-weight:700;
                         ">
                             ${s.name}
                         </td>
@@ -4704,7 +4711,7 @@ button.btn-report {
                         ">
 
                             <tr>
-                                <th style="width:8%">STT</th>
+                                <th style="width:8%;text-align:center">STT</th>
                                 <th style="width:58%">Họ tên</th>
                                 <th style="width:18%">TT học viên</th>
                                 <th style="width:8%">TL</th>
@@ -4722,7 +4729,7 @@ button.btn-report {
                         ">
 
                             <tr>
-                                <th style="width:8%">STT</th>
+                                <th style="width:8%;text-align:center">STT</th>
                                 <th style="width:58%">Họ tên</th>
                                 <th style="width:18%">TT học viên</th>
                                 <th style="width:8%">TL</th>
