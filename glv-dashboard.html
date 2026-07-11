@@ -4352,6 +4352,10 @@ button.btn-report {
                 select.closest('.status-editor').dataset.status = getStatusKey(data.status);
                 const student = allStudents.find(item => item.studentId === studentId);
                 if (student) student.status = data.status;
+                const tableWrapper = document.querySelector('.table-wrapper');
+                const scrollTop = tableWrapper ? tableWrapper.scrollTop : 0;
+                filterStudents();
+                if (tableWrapper) tableWrapper.scrollTop = scrollTop;
                 showToast('Đã cập nhật tình trạng');
             } catch (err) {
                 select.value = previousStatus;
