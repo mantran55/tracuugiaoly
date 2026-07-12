@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 const SHEET_GROUPS = {
   "2b": "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E",
   "1e": "1Fziw9eSbGjA-TLkSqpVbas5gFa9fkwsECLNeb_j11Ww",
-  "2f": "1LmM866E7FaPJwsdtE3w7I2tSVU_z3I9YTpndxjfjQVc"
+  "2f": "1th0s_ncilgFMCbKMUsZYOA43EnAQUje7DcCg5Xl9UlI"
 };
 
 // =========================
@@ -37,7 +37,8 @@ const sheetStates = Object.fromEntries(
     studentMap: {},
     scoreMap: {},
     statusMap: {},
-    statusRowMap: {}
+    statusRowMap: {},
+    leaveMap: {}
   }])
 );
 
@@ -108,7 +109,7 @@ const auth = new google.auth.GoogleAuth({
 
       sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: `${STATUS_SHEET}!A:E`
+          range: `${STATUS_SHEET}!A:F`
       })
   ]);
 
@@ -121,6 +122,7 @@ const auth = new google.auth.GoogleAuth({
   const tempScoreMap = {};
   const tempStatusMap = {};
   const tempStatusRowMap = {};
+  const tempLeaveMap = {};
 
   // Map data học sinh (bắt đầu từ dòng 4 -> index 3)
   for (let i = 3; i < rows.length; i++) {
@@ -152,11 +154,15 @@ const auth = new google.auth.GoogleAuth({
     const status =
         String(statusRows[i][4] || "")
         .trim();
+    const leave =
+        String(statusRows[i][5] || "")
+        .trim();
 
     if (studentId) {
 
         tempStatusMap[studentId] = status;
         tempStatusRowMap[studentId] = i + 1;
+        tempLeaveMap[studentId] = leave;
 
     }
 }
@@ -168,6 +174,7 @@ const auth = new google.auth.GoogleAuth({
   state.scoreMap = tempScoreMap;
   state.statusMap = tempStatusMap;
   state.statusRowMap = tempStatusRowMap;
+  state.leaveMap = tempLeaveMap;
 
   console.log(`📥 Reload Sheet ${group} thành công (${Object.keys(state.studentMap).length} học sinh)`);
   return rows;
@@ -484,6 +491,101 @@ app.put("/student/:id/status", async (req, res) => {
 });
 
 // =========================
+// API: Đơn phép học viên (Tình Trạng!F4:F)
+// =========================
+app.get("/leave-requests", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    await getSheetData(group);
+    const state = getState(group);
+
+    const requests = Object.values(state.studentMap)
+      .filter(row => state.leaveMap[String(row[1] || "").trim()])
+      .sort((a, b) => a._rowNumber - b._rowNumber)
+      .map(row => {
+        const studentId = String(row[1] || "").trim();
+        return {
+          studentId,
+          name: row[2] || "",
+          className: row[3] || "",
+          leave: state.leaveMap[studentId]
+        };
+      });
+
+    return res.json({ success: true, requests });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/leave-requests", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const studentId = String(req.body.studentId || "").trim();
+    const type = String(req.body.type || "").trim();
+    const replacementDay = String(req.body.replacementDay || "").trim();
+    const absenceDate = String(req.body.absenceDate || "").trim();
+
+    if (!studentId || !["makeup", "excused"].includes(type)) {
+      return res.status(400).json({ success: false, message: "Thông tin đơn phép không hợp lệ" });
+    }
+
+    let leaveText = "";
+    if (type === "makeup") {
+      if (!replacementDay) {
+        return res.status(400).json({ success: false, message: "Vui lòng nhập buổi thay thế" });
+      }
+      leaveText = `Đơn thay thế buổi thứ 5 sang ${replacementDay}`;
+    } else {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(absenceDate)) {
+        return res.status(400).json({ success: false, message: "Vui lòng chọn ngày vắng" });
+      }
+      leaveText = `Vắng có phép ngày ${formatLeaveDateVN(absenceDate)}`;
+    }
+
+    await getSheetData(group);
+    const state = getState(group);
+    if (!state.studentMap[studentId]) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy học viên" });
+    }
+
+    const sheets = await getSheetsClient();
+    const spreadsheetId = SHEET_GROUPS[group];
+    const statusRow = state.statusRowMap[studentId];
+
+    if (statusRow) {
+      const current = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${STATUS_SHEET}!F${statusRow}`
+      });
+      const existingLeave = String(current.data.values?.[0]?.[0] || "").trim();
+      const value = existingLeave ? `${existingLeave} ; ${leaveText}` : leaveText;
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${STATUS_SHEET}!F${statusRow}`,
+        valueInputOption: "RAW",
+        requestBody: { values: [[value]] }
+      });
+    } else {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${STATUS_SHEET}!A:F`,
+        valueInputOption: "RAW",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [["", studentId, "", "", "", leaveText]] }
+      });
+    }
+
+    await loadSheetData(group);
+    return res.json({ success: true, studentId, leave: getState(group).leaveMap[studentId] || leaveText });
+  } catch (err) {
+    console.error("Lỗi thêm đơn phép:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
 // API: Danh sách học sinh (Cho GLV)
 // =========================
 app.get("/students", async (req, res) => {
@@ -791,6 +893,7 @@ app.get("/refresh-cache", async (req, res) => {
     state.scoreMap = {};
     state.statusMap = {};
     state.statusRowMap = {};
+    state.leaveMap = {};
     
     await loadSheetData(group);
     return res.json({ success: true, message: "Cache refreshed" });
@@ -820,6 +923,13 @@ function formatShortDateVN(dateStr) {
   const [year, month, day] = String(dateStr || "").split("-");
   if (!year || !month || !day) return "";
   return `${day}/${month}`;
+}
+
+function formatLeaveDateVN(dateStr) {
+  const [year, month, day] = String(dateStr || "").split("-");
+  if (!year || !month || !day) return "";
+  const weekday = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][new Date(`${dateStr}T00:00:00`).getDay()];
+  return `${day}/${month}/${year} (${weekday})`;
 }
 
 async function importAttendance(date, classId, group) {
