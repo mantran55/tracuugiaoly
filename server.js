@@ -72,6 +72,34 @@ function googleDateToString(serial) {
   };
 }
 
+function splitLeaveItems(value) {
+  return String(value || "")
+    .split(/\s*;\s*/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function parseAttendanceHeaderDate(value, targetYear) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const date = new Date(Date.UTC(1899, 11, 30) + Math.round(value) * 86400000);
+    return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+  }
+
+  const match = String(value || "").trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (!match) return null;
+  const year = match[3] ? Number(match[3].length === 2 ? `20${match[3]}` : match[3]) : targetYear;
+  return { year, month: Number(match[2]), day: Number(match[1]) };
+}
+
+function countWeekdaysInMonth(year, month, weekdays) {
+  const lastDay = new Date(year, month, 0).getDate();
+  let total = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    if (weekdays.includes(new Date(year, month - 1, day).getDay())) total++;
+  }
+  return total;
+}
+
 // =========================
 // CORE: Đọc Google Sheet
 // =========================
@@ -426,6 +454,8 @@ app.get("/student/:id", async (req, res) => {
       className: studentRow[3] || "",
       status:
       state.statusMap[studentId] || "",
+      leave: state.leaveMap[studentId] || "",
+      leaveItems: splitLeaveItems(state.leaveMap[studentId]),
       group,
       avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
       totalMass: ccamsData.totalMass,
@@ -508,12 +538,56 @@ app.get("/leave-requests", async (req, res) => {
           studentId,
           name: row[2] || "",
           className: row[3] || "",
-          leave: state.leaveMap[studentId]
+          leave: state.leaveMap[studentId],
+          leaveItems: splitLeaveItems(state.leaveMap[studentId]),
+          excusedCount: splitLeaveItems(state.leaveMap[studentId])
+            .filter(item => /^Vắng có phép ngày\s+/i.test(item)).length
         };
       });
 
     return res.json({ success: true, requests });
   } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Chỉnh sửa hoặc gỡ từng đơn phép; mảng leaveItems được nối lại bằng " ; " trong Sheet.
+app.put("/leave-requests/:id", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const studentId = String(req.params.id || "").trim();
+    const leaveItems = Array.isArray(req.body.leaveItems)
+      ? req.body.leaveItems.map(item => String(item || "").trim()).filter(Boolean)
+      : null;
+
+    if (!leaveItems) {
+      return res.status(400).json({ success: false, message: "Dữ liệu đơn phép không hợp lệ" });
+    }
+
+    await getSheetData(group);
+    const state = getState(group);
+    if (!state.studentMap[studentId]) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy học viên" });
+    }
+
+    const statusRow = state.statusRowMap[studentId];
+    if (!statusRow) {
+      return res.status(404).json({ success: false, message: "Học viên chưa có dữ liệu đơn phép" });
+    }
+
+    const sheets = await getSheetsClient();
+    const leave = leaveItems.join(" ; ");
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_GROUPS[group],
+      range: `${STATUS_SHEET}!F${statusRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[leave]] }
+    });
+
+    await loadSheetData(group);
+    return res.json({ success: true, studentId, leave, leaveItems });
+  } catch (err) {
+    console.error("Lỗi cập nhật đơn phép:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -603,12 +677,71 @@ app.get("/students", async (req, res) => {
         status:
             state.statusMap[
                 String(row[1] || "").trim()
-            ] || ""
+            ] || "",
+        leave: state.leaveMap[String(row[1] || "").trim()] || ""
     }));
 
     res.json({ success: true, total: students.length, students });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
+// API: Báo cáo điểm danh theo tháng
+// =========================
+app.get("/monthly-attendance-report", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const monthValue = String(req.query.month || "").trim();
+    const match = monthValue.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return res.status(400).json({ success: false, message: "Tháng không hợp lệ" });
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    if (month < 1 || month > 12) return res.status(400).json({ success: false, message: "Tháng không hợp lệ" });
+
+    await getSheetData(group);
+    const state = getState(group);
+    const headers = state.cacheData?.[2] || [];
+    const monthColumns = headers.map((header, index) => ({ index, date: parseAttendanceHeaderDate(header, year) }))
+      .filter(item => item.date && item.date.year === year && item.date.month === month);
+
+    const scheduledMass = countWeekdaysInMonth(year, month, [0, 4]);
+    const scheduledCatechism = countWeekdaysInMonth(year, month, [0]);
+    const students = Object.values(state.studentMap)
+      .sort((a, b) => a._rowNumber - b._rowNumber)
+      .map(row => {
+        let massPresent = 0;
+        let catechismPresent = 0;
+        monthColumns.forEach(({ index }) => {
+          const mark = String(row[index] || "").trim().toUpperCase();
+          if (mark === "C" || mark === "CG") massPresent++;
+          if (mark === "G" || mark === "CG") catechismPresent++;
+        });
+        const studentId = String(row[1] || "").trim();
+        return {
+          studentId,
+          name: row[2] || "",
+          className: row[3] || "",
+          status: state.statusMap[studentId] || "",
+          massPresent,
+          massAbsent: Math.max(0, scheduledMass - massPresent),
+          catechismPresent,
+          catechismAbsent: Math.max(0, scheduledCatechism - catechismPresent)
+        };
+      });
+
+    return res.json({
+      success: true,
+      month: monthValue,
+      scheduledMass,
+      scheduledCatechism,
+      students
+    });
+  } catch (err) {
+    console.error("Lỗi báo cáo tháng:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
