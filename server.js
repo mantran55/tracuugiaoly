@@ -216,6 +216,36 @@ async function getSheetData(group) {
   return await loadSheetData(group);
 }
 
+// Lịch sử tham dự lấy trực tiếp từ các cột ngày ở sheet Thánh Lễ.
+function getStudentSheetAttendance(state, studentRow) {
+  const headers = state.cacheData?.[2] || [];
+  const currentYear = new Date().getFullYear();
+  const attendance = [];
+  let adoration = 0;
+  let confession = 0;
+
+  headers.forEach((header, columnIndex) => {
+    const date = parseAttendanceHeaderDate(header, currentYear);
+    if (!date) return;
+    const mark = String(studentRow[columnIndex] || "").trim().toUpperCase();
+    if (!mark) return;
+
+    const item = {
+      date: `${String(date.day).padStart(2, "0")}/${String(date.month).padStart(2, "0")}/${date.year}`,
+      mass: mark.includes("C"),
+      catechism: mark.includes("G"),
+      adoration: mark.includes("T"),
+      confession: mark.includes("X"),
+      mark
+    };
+    if (item.adoration) adoration++;
+    if (item.confession) confession++;
+    attendance.push(item);
+  });
+
+  return { attendance, adoration, confession };
+}
+
 // =========================
 // CORE: Parse dữ liệu CCAMS (Được tách riêng chuẩn hóa)
 // =========================
@@ -437,14 +467,9 @@ app.get("/student/:id", async (req, res) => {
       return res.json({ success: false, message: "Không tìm thấy học sinh" });
     }
 
-    const phone = (studentRow[4] || "").toString().trim();
+    const sheetAttendance = getStudentSheetAttendance(state, studentRow);
     
     // Gọi 1 lần duy nhất
-    const ccamsData =
-      await getCCAMSData(
-        phone,
-        studentId
-      );
     const score = state.scoreMap[studentId] || {};
 
     return res.json({
@@ -458,11 +483,12 @@ app.get("/student/:id", async (req, res) => {
       leaveItems: splitLeaveItems(state.leaveMap[studentId]),
       group,
       avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
-      totalMass: ccamsData.totalMass,
-      catechism: ccamsData.catechism,
-      adoration: ccamsData.adoration,
+      totalMass: Number(studentRow[5] || 0),
+      catechism: Number(studentRow[8] || 0),
+      adoration: sheetAttendance.adoration,
+      confession: sheetAttendance.confession,
       scores: score,
-      attendance: ccamsData.attendance
+      attendance: sheetAttendance.attendance
     });
 
   } catch (err) {
@@ -716,8 +742,8 @@ app.get("/monthly-attendance-report", async (req, res) => {
         let catechismPresent = 0;
         monthColumns.forEach(({ index }) => {
           const mark = String(row[index] || "").trim().toUpperCase();
-          if (mark === "C" || mark === "CG") massPresent++;
-          if (mark === "G" || mark === "CG") catechismPresent++;
+          if (mark.includes("C")) massPresent++;
+          if (mark.includes("G")) catechismPresent++;
         });
         const studentId = String(row[1] || "").trim();
         return {
@@ -870,7 +896,7 @@ app.get("/today-attendance", async (req, res) => {
     };
 
       // Có mặt nếu là C hoặc CG
-      if (value === "C" || value === "CG") {
+      if (value.includes("C")) {
         presentStudents.push(student);
       } else {
         absentStudents.push(student);
@@ -985,13 +1011,10 @@ app.get("/attendance-report", async (req, res) => {
 
                     mark,
 
-                    tl:
-                        mark === "C" ||
-                        mark === "CG",
-
-                    gl:
-                        mark === "G" ||
-                        mark === "CG"
+                    tl: mark.includes("C"),
+                    gl: mark.includes("G"),
+                    tt: mark.includes("T"),
+                    xt: mark.includes("X")
                 };
 
             });
