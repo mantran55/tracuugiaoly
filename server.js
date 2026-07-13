@@ -726,6 +726,7 @@ app.get("/monthly-attendance-report", async (req, res) => {
     const year = Number(match[1]);
     const month = Number(match[2]);
     if (month < 1 || month > 12) return res.status(400).json({ success: false, message: "Tháng không hợp lệ" });
+    const requestedDaysOff = Math.floor(Number(req.query.catechismDaysOff || 0));
 
     await getSheetData(group);
     const state = getState(group);
@@ -735,6 +736,8 @@ app.get("/monthly-attendance-report", async (req, res) => {
 
     const scheduledMass = countWeekdaysInMonth(year, month, [0, 4]);
     const scheduledCatechism = countWeekdaysInMonth(year, month, [0]);
+    const catechismDaysOff = Math.min(scheduledCatechism, Math.max(0, requestedDaysOff || 0));
+    const effectiveCatechismDays = scheduledCatechism - catechismDaysOff;
     const students = Object.values(state.studentMap)
       .sort((a, b) => a._rowNumber - b._rowNumber)
       .map(row => {
@@ -754,7 +757,7 @@ app.get("/monthly-attendance-report", async (req, res) => {
           massPresent,
           massAbsent: Math.max(0, scheduledMass - massPresent),
           catechismPresent,
-          catechismAbsent: Math.max(0, scheduledCatechism - catechismPresent)
+          catechismAbsent: Math.max(0, effectiveCatechismDays - catechismPresent)
         };
       });
 
@@ -763,6 +766,8 @@ app.get("/monthly-attendance-report", async (req, res) => {
       month: monthValue,
       scheduledMass,
       scheduledCatechism,
+      catechismDaysOff,
+      effectiveCatechismDays,
       students
     });
   } catch (err) {
