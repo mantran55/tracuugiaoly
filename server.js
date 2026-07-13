@@ -91,6 +91,15 @@ function parseAttendanceHeaderDate(value, targetYear) {
   return { year, month: Number(match[2]), day: Number(match[1]) };
 }
 
+function findAttendanceDateColumn(headers, dateStr) {
+  const [year, month, day] = String(dateStr || "").split("-").map(Number);
+  if (!year || !month || !day) return -1;
+  return headers.findIndex(header => {
+    const parsed = parseAttendanceHeaderDate(header, year);
+    return parsed && parsed.year === year && parsed.month === month && parsed.day === day;
+  });
+}
+
 function countWeekdaysInMonth(year, month, weekdays) {
   const lastDay = new Date(year, month, 0).getDate();
   let total = 0;
@@ -345,9 +354,7 @@ app.post("/import-attendance-range", async (req, res) => {
         send("progress", { phase: "fetching", current: 0, total, message: "Đang lấy dữ liệu từ CCAMS..." });
         for (let index = 0; index < dates.length; index++) {
             const currentDate = dates[index];
-            const date = new Date(`${currentDate}T00:00:00`);
-            const targetDate = `${date.getDate()}/${date.getMonth() + 1}`;
-            const dateCol = headers.findIndex(header => String(header).trim() === targetDate);
+            const dateCol = findAttendanceDateColumn(headers, currentDate);
 
             if (dateCol === -1) {
                 results.push({ date: currentDate, count: 0, error: "Không tìm thấy cột ngày trong Sheet" });
