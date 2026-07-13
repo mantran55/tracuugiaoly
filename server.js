@@ -314,86 +314,91 @@ async function getCCAMSData(phone, studentId) {
 }
 
 app.post("/import-attendance-range", async (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+    const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
     try {
         const group = getGroup(req);
-
-        const {
-            fromDate,
-            toDate,
-            classId
-        } = req.body;
-
-        const start =
-            new Date(fromDate);
-
-        const end =
-            new Date(toDate);
-
-        const results = [];
-
-        for (
-            let d = new Date(start);
-            d <= end;
-            d.setDate(d.getDate() + 1)
-        ) {
-
-            const currentDate =
-                new Date(
-                    d.getTime() -
-                    d.getTimezoneOffset() * 60000
-                )
-                .toISOString()
-                .split("T")[0];
-
-            try {
-
-                const result =
-                    await importAttendance(
-                        currentDate,
-                        classId,
-                        group
-                    );
-
-                results.push({
-                    date: currentDate,
-                    count: result.count
-                });
-
-            } catch (err) {
-
-                results.push({
-                    date: currentDate,
-                    count: 0
-                });
-
-            }
+        const { fromDate, toDate, classId } = req.body;
+        const start = new Date(`${fromDate}T00:00:00`);
+        const end = new Date(`${toDate}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end || !classId) {
+            throw new Error("Khoảng ngày hoặc lớp không hợp lệ");
         }
 
-        const lastUpdated = formatShortDateVN(toDate);
-        const sheets = await getSheetsClient();
-        await sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_GROUPS[group],
-            range: `${ATTENDANCE_SHEET}!G1`,
-            valueInputOption: "RAW",
-            requestBody: {
-                values: [[`cập nhật gần đây: ${lastUpdated}`]]
+        const dates = [];
+        for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+            dates.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`);
+        }
+
+        // Chỉ đọc Sheet một lần để lấy danh sách, dòng học viên và các cột ngày.
+        await getSheetData(group);
+        const state = getState(group);
+        const headers = state.cacheData?.[2] || [];
+        const updates = [];
+        const results = [];
+        const total = dates.length;
+
+        send("progress", { phase: "fetching", current: 0, total, message: "Đang lấy dữ liệu từ CCAMS..." });
+        for (let index = 0; index < dates.length; index++) {
+            const currentDate = dates[index];
+            const date = new Date(`${currentDate}T00:00:00`);
+            const targetDate = `${date.getDate()}/${date.getMonth() + 1}`;
+            const dateCol = headers.findIndex(header => String(header).trim() === targetDate);
+
+            if (dateCol === -1) {
+                results.push({ date: currentDate, count: 0, error: "Không tìm thấy cột ngày trong Sheet" });
+                send("progress", { phase: "fetching", current: index + 1, total, date: currentDate, message: `Đã đọc ${index + 1}/${total} ngày` });
+                continue;
             }
+
+            try {
+                const attendance = await getAttendanceByClass(classId, formatDateVN(currentDate));
+                let count = 0;
+                attendance.forEach(item => {
+                    const student = state.studentMap[item.studentId];
+                    if (!student) return;
+                    updates.push({
+                        range: `${ATTENDANCE_SHEET}!${columnLetter(dateCol + 1)}${student._rowNumber}`,
+                        values: [[item.mark]]
+                    });
+                    count++;
+                });
+                results.push({ date: currentDate, count });
+            } catch (err) {
+                results.push({ date: currentDate, count: 0, error: err.message });
+            }
+            send("progress", { phase: "fetching", current: index + 1, total, date: currentDate, message: `Đã đọc ${index + 1}/${total} ngày từ CCAMS` });
+        }
+
+        send("progress", { phase: "writing", current: total, total, message: "Đang ghi toàn bộ dữ liệu vào Google Sheet..." });
+        const lastUpdated = formatShortDateVN(toDate);
+        updates.push({
+            range: `${ATTENDANCE_SHEET}!G1`,
+            values: [[`cập nhật gần đây: ${lastUpdated}`]]
+        });
+        const sheets = await getSheetsClient();
+        await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SHEET_GROUPS[group],
+            requestBody: { valueInputOption: "RAW", data: updates }
         });
 
-        res.json({
+        // Tránh đọc lại Sheet ngay sau khi ghi; request kế tiếp sẽ tự nạp dữ liệu mới.
+        state.cacheData = null;
+        state.cacheTimestamp = 0;
+        send("complete", {
             success: true,
             results,
             lastUpdated: `cập nhật gần đây: ${lastUpdated}`
         });
-
     } catch (err) {
-
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
-
+        console.error("Lỗi import điểm danh theo khoảng:", err);
+        send("error", { success: false, error: err.message });
+    } finally {
+        res.end();
     }
 
 });
