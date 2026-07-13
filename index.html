@@ -711,6 +711,17 @@
             padding-top: 16px;
             border-top: 1px solid var(--border-soft);
         }
+        .student-leave-box {
+            margin-top: 14px;
+            padding: 11px 12px;
+            border: 1px solid #fde68a;
+            border-radius: 11px;
+            background: #fffbeb;
+            color: #92400e;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+        .student-leave-box strong { display:block; margin-bottom:4px; color:#78350f; }
 
         .meta-item {
             display: flex;
@@ -1310,6 +1321,12 @@
                 .replace(/\s+/g, '-');
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[char]);
+        }
+
         const API_URL = 'https://tracuugiaoly.onrender.com';
 
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
@@ -1400,6 +1417,11 @@
                             ? '<span class="check-badge yes">✓</span>'
                             : '<span class="check-badge no">—</span>'}
                     </td>
+                    <td>
+                        ${item.confession
+                            ? '<span class="check-badge yes">✓</span>'
+                            : '<span class="check-badge no">—</span>'}
+                    </td>
 
                 </tr>
                 `;
@@ -1445,6 +1467,7 @@
                             ${total} buổi điểm danh
                         </div>
                     </div>
+                    ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
                 </div>
             </div>
 
@@ -1472,8 +1495,8 @@
                     <div class="stat-icon">
                         <span class="material-icons-round">history</span>
                     </div>
-                    <div class="stat-number" data-target="${attendance.length}">0</div>
-                    <div class="stat-label">Lần Điểm Danh</div>
+                    <div class="stat-number" data-target="${data.confession || 0}">0</div>
+                    <div class="stat-label">Lần Xưng Tội</div>
                 </div>
             </div>
 
@@ -1497,6 +1520,7 @@
                                         <th>Thánh Lễ</th>
                                         <th>Giáo Lý</th>
                                         <th>Chầu TT</th>
+                                        <th>Xưng Tội</th>
                                     </tr
                                 </thead>
                                 <tbody>${rows}</tbody>
