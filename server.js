@@ -732,6 +732,7 @@ app.get("/monthly-attendance-report", async (req, res) => {
   try {
     const group = getGroup(req);
     const monthValue = String(req.query.month || "").trim();
+    const className = String(req.query.className || "").trim();
     const match = monthValue.match(/^(\d{4})-(\d{2})$/);
     if (!match) return res.status(400).json({ success: false, message: "Tháng không hợp lệ" });
 
@@ -752,6 +753,7 @@ app.get("/monthly-attendance-report", async (req, res) => {
     const effectiveCatechismDays = scheduledCatechism - catechismDaysOff;
     const students = Object.values(state.studentMap)
       .sort((a, b) => a._rowNumber - b._rowNumber)
+      .filter(row => !className || String(row[3] || "").trim() === className)
       .map(row => {
         let massPresent = 0;
         let catechismPresent = 0;
@@ -780,6 +782,7 @@ app.get("/monthly-attendance-report", async (req, res) => {
       scheduledCatechism,
       catechismDaysOff,
       effectiveCatechismDays,
+      className,
       students
     });
   } catch (err) {
