@@ -132,7 +132,7 @@ async function getAttendanceByClass(classId, date) {
 
     const td = $(row).find("td");
 
-    if (td.length < 7) return;
+    if (td.length < 9) return;
 
     const studentId =
       $(td[1]).text().trim();
@@ -157,9 +157,40 @@ async function getAttendanceByClass(classId, date) {
       mark = "G";
     }
 
+    // Cột CCAMS tiếp theo: Chầu Thánh Thể (7), Xưng tội (8).
+    const hasAdoration =
+      $(td[7]).html()?.includes("check") ||
+      Boolean($(td[7]).text().trim());
+
+    const hasConfession =
+      $(td[8]).html()?.includes("check") ||
+      Boolean($(td[8]).text().trim());
+
+    if (hasAdoration) mark += "T";
+    if (hasConfession) mark += "X";
+
+    // CCAMS có thể trả icon hoặc ký tự tick; đọc cả HTML lẫn text để không bỏ sót Xưng tội.
+    const isChecked = cell => {
+      const content = `${$(cell).html() || ""} ${$(cell).text() || ""}`.toLowerCase();
+      return content.includes("check") ||
+        content.includes("\u2713") ||
+        content.includes("\u2714") ||
+        content.includes("\u2705");
+    };
+    const normalizedMark = [
+      isChecked(td[5]) ? "C" : "",
+      isChecked(td[6]) ? "G" : "",
+      isChecked(td[7]) ? "T" : "",
+      isChecked(td[8]) ? "X" : ""
+    ].join("");
+
+    if (normalizedMark.includes("T") || normalizedMark.includes("X")) {
+      console.log(`CCAMS extra attendance: ${studentId} = ${normalizedMark}`);
+    }
+
     students.push({
       studentId,
-      mark
+      mark: normalizedMark
     });
 
   });
