@@ -473,7 +473,7 @@
             font-size: 13px;
             font-weight: 600;
             font-family: 'Be Vietnam Pro', sans-serif;
-            z-index: 999;
+            z-index: 100000;
             transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
             box-shadow: var(--shadow-lg);
             pointer-events: none;
@@ -484,6 +484,12 @@
 
         .toast.show {
             transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            border-color: var(--green-pale);
+            border-left-color: var(--green);
+            color: #047857;
         }
 
         .hidden { display: none !important; }
@@ -1591,6 +1597,12 @@
             padding: 18px 22px;
         }
 
+        .monthly-report-modal .student-header {
+            background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
+            color: white;
+            padding: 18px 22px;
+        }
+
         .attendance-modal .student-header h2 {
             margin: 0;
             font-size: 20px;
@@ -1756,6 +1768,10 @@
 
         #attendanceResult .success { color: #16a34a; }
         #attendanceResult .error { color: #dc2626; }
+
+        .attendance-progress-track { height:8px; margin-top:13px; overflow:hidden; border-radius:999px; background:#dbeafe; }
+        .attendance-progress-bar { width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#38bdf8); transition:width .25s ease; }
+        .attendance-progress-text { margin-top:8px; color:var(--text-secondary); font-size:11px; font-weight:700; }
 
         #attendanceDateText {
             font-size: 14px;
@@ -3483,6 +3499,10 @@ button.btn-report {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
 
+.toolbar-actions button.btn-leave {
+    background: linear-gradient(135deg, #d97706, #b45309);
+}
+
 @media (max-width: 600px) {
     .table-toolbar {
         display: grid;
@@ -3507,7 +3527,7 @@ button.btn-report {
     .toolbar-actions {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         margin: 2px 0 0;
     }
@@ -3582,6 +3602,140 @@ button.btn-report {
     padding-bottom: 32px;
 }
 
+/* === ĐƠN PHÉP === */
+.leave-modal {
+    width: min(620px, 95vw);
+    max-height: 88dvh;
+}
+
+.leave-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #92400e, #d97706);
+    color: white;
+}
+
+.leave-header h2 { margin: 0; font-size: 19px; }
+
+.leave-add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,.16);
+    color: white;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-right: 40px;
+}
+
+.leave-add-button .material-icons-round { font-size: 17px; }
+
+.leave-list { padding: 16px; }
+
+.leave-empty {
+    padding: 34px 16px;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.leave-item {
+    padding: 13px 14px;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    background: #fffbeb;
+    margin-bottom: 10px;
+}
+
+.leave-item:last-child { margin-bottom: 0; }
+.leave-item { cursor: pointer; transition: transform .16s ease, box-shadow .16s ease; }
+.leave-item:hover { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(146,64,14,.12); }
+.leave-item-name { color: var(--text); font-size: 14px; font-weight: 800; display:flex; align-items:center; gap:7px; }
+.leave-count { padding:3px 7px; border-radius:999px; background:#fef3c7; color:#92400e; font-size:10px; font-weight:800; white-space:nowrap; }
+.leave-item-meta { margin-top: 3px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.leave-item-text { margin-top: 8px; color: #92400e; font-size: 12px; line-height: 1.55; }
+.leave-edit-row { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+.leave-edit-row input { margin:0; }
+.leave-remove-button { width:42px; height:42px; flex:0 0 42px; border:0; border-radius:10px; background:#fee2e2; color:#dc2626; cursor:pointer; }
+.leave-edit-empty { padding:15px; border:1px dashed #fca5a5; border-radius:10px; color:#991b1b; font-size:13px; text-align:center; }
+.student-leave-box { margin-top:14px; padding:11px 12px; border:1px solid #fde68a; border-radius:11px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.55; }
+.student-leave-box strong { display:block; margin-bottom:4px; color:#78350f; }
+
+button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); color:white; }
+.monthly-report-modal { width:min(1100px, calc(100vw - 24px)); max-height:calc(100dvh - 24px); display:flex; flex-direction:column; }
+.monthly-report-body { padding:20px; overflow:auto; }
+.monthly-report-body label { display:block; margin-bottom:7px; font-size:12px; font-weight:800; color:var(--text-secondary); }
+.monthly-report-body select { min-height:44px; padding:0 12px; border:1px solid var(--border); border-radius:10px; font:inherit; }
+.monthly-days-off-toggle { display:flex; align-items:center; gap:8px; margin:0; color:var(--text-secondary); font-size:13px; font-weight:750; cursor:pointer; white-space:nowrap; }
+.monthly-days-off-toggle input { width:17px; height:17px; accent-color:#7c3aed; }
+.monthly-days-off-fields { display:grid; grid-template-columns:150px 1fr; gap:10px; margin-top:10px; }
+.monthly-days-off-fields input { min-height:42px; padding:0 11px; border:1px solid var(--border); border-radius:9px; font:inherit; font-size:13px; }
+.monthly-report-body .leave-submit { width:auto; padding:0 16px; margin:0 0 0 8px; min-height:44px; }
+.monthly-report-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.monthly-report-body .monthly-report-controls .leave-submit { margin:0; }
+.monthly-report-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.monthly-report-actions button { min-height:40px; border:0; border-radius:9px; padding:0 12px; color:white; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
+.monthly-report-actions .monthly-excel { background:#15803d; }
+.monthly-report-actions .monthly-image { background:#2563eb; }
+.monthly-report-note { margin:16px 0 10px; color:var(--text-secondary); font-size:12px; font-weight:700; }
+.monthly-report-table-wrap { max-height:55dvh; overflow:auto; border:1px solid var(--border); border-radius:11px; }
+.monthly-report-table { width:100%; min-width:720px; border-collapse:collapse; font-size:12px; }
+.monthly-report-table th, .monthly-report-table td { padding:12px 12px; border:1px solid #ddd6fe; text-align:center; }
+.monthly-report-table th { position:sticky; z-index:2; background:#1a076e; color:#ffffff; font-weight:800; }
+.monthly-report-table thead tr:first-child th { top:0; }
+.monthly-report-table thead tr:nth-child(2) th { top:39px; }
+.monthly-report-table th[rowspan="2"] { vertical-align:middle; }
+.monthly-report-table td:nth-child(2) { text-align:left; font-weight:750; }
+.monthly-report-table td.monthly-absence-cell { background:#fff1f2; color:#9f1239; font-weight:800; }
+
+.leave-form { padding: 20px; }
+.leave-form label { display: block; margin: 14px 0 7px; color: var(--text-secondary); font-size: 12px; font-weight: 800; }
+.leave-form label:first-child { margin-top: 0; }
+.leave-form input, .leave-form select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+.leave-form input:focus, .leave-form select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(217,119,6,.12); }
+.leave-student-picker { position: relative; }
+.leave-student-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    z-index: 3;
+    width: 100%;
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    box-shadow: var(--shadow-lg);
+}
+
+.leave-student-option { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); cursor: pointer; }
+.leave-student-option:last-child { border-bottom: 0; }
+.leave-student-option:hover { background: var(--gold-pale); }
+.leave-student-option strong { display: block; font-size: 13px; }
+.leave-student-option span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 11px; }
+.leave-submit { width: 100%; min-height: 46px; margin-top: 22px; border: 0; border-radius: 11px; background: linear-gradient(135deg, #d97706, #b45309); color: white; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+
 @media (max-width: 768px) {
     .attendance-modal {
         max-height: calc(100dvh - 24px);
@@ -3590,6 +3744,10 @@ button.btn-report {
     .attendance-modal .attendance-body {
         max-height: calc(100dvh - 84px);
     }
+    .monthly-report-body { padding:15px; }
+    .monthly-report-body select { width:calc(100% - 122px); }
+    .monthly-report-controls { margin-top:10px; }
+    .monthly-days-off-fields { grid-template-columns:1fr; }
 }
 
     </style>
@@ -3600,7 +3758,7 @@ button.btn-report {
     <div class="bg-grid"></div>
 
     <div class="toast" id="toast">
-        <span class="material-icons-round" style="font-size:18px;">warning</span>
+        <span class="material-icons-round" id="toastIcon" style="font-size:18px;">warning</span>
         <span id="toastMsg"></span>
     </div>
 
@@ -3762,6 +3920,10 @@ button.btn-report {
                         <span class="material-icons-round">assignment</span>
                         <span>Báo cáo</span>
                     </button>
+                    <button class="btn-monthly-report" onclick="openMonthlyReportModal()">
+                        <span class="material-icons-round">calendar_month</span>
+                        <span>Báo cáo tháng</span>
+                    </button>
 
                     <button
                         class="btn btn-primary"
@@ -3769,6 +3931,10 @@ button.btn-report {
                     >
                         <span class="material-icons-round">fact_check</span>
                         <span>Lấy điểm danh</span>
+                    </button>
+                    <button class="btn-leave" onclick="openLeaveModal()">
+                        <span class="material-icons-round">event_note</span>
+                        <span>Đơn phép</span>
                     </button>
                 </div>
 
@@ -3799,11 +3965,97 @@ button.btn-report {
         </div>
     </div>
 
+    <!-- ================= MODAL: ĐƠN PHÉP ================= -->
+    <div id="leaveModal" class="modal-overlay hidden">
+        <div class="modal-content leave-modal">
+            <button class="modal-close" onclick="closeLeaveModal()">✕</button>
+            <div class="leave-header">
+                <h2>Đơn phép</h2>
+                <button class="leave-add-button" onclick="openLeaveFormModal()">
+                    <span class="material-icons-round">add</span>
+                    Thêm
+                </button>
+            </div>
+            <div id="leaveRequestsList" class="leave-list"></div>
+        </div>
+    </div>
+
+    <div id="leaveFormModal" class="modal-overlay hidden">
+        <div class="modal-content leave-modal">
+            <button class="modal-close" onclick="closeLeaveFormModal()">✕</button>
+            <div class="leave-header"><h2>Thêm đơn phép</h2></div>
+            <form class="leave-form" id="leaveForm" onsubmit="submitLeaveRequest(event)">
+                <label for="leaveStudentSearch">Học viên</label>
+                <div class="leave-student-picker">
+                    <input id="leaveStudentSearch" type="text" autocomplete="off" placeholder="Nhập tên hoặc mã học viên" oninput="filterLeaveStudents()">
+                    <input id="leaveStudentId" type="hidden">
+                    <div id="leaveStudentOptions" class="leave-student-options hidden"></div>
+                </div>
+
+                <label for="leaveType">Loại đơn</label>
+                <select id="leaveType" onchange="toggleLeaveFields()">
+                    <option value="makeup">Đơn thay thế buổi thứ 5</option>
+                    <option value="excused">Vắng có phép</option>
+                </select>
+
+                <div id="leaveMakeupField">
+                    <label for="leaveReplacementDay">Buổi thay thế</label>
+                    <input id="leaveReplacementDay" type="text" placeholder="Ví dụ: thứ hai">
+                </div>
+
+                <div id="leaveExcusedField" class="hidden">
+                    <label for="leaveAbsenceDate">Ngày vắng</label>
+                    <input id="leaveAbsenceDate" type="date">
+                </div>
+
+                <button type="submit" class="leave-submit">Lưu đơn phép</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="leaveEditModal" class="modal-overlay hidden">
+        <div class="modal-content leave-modal">
+            <button class="modal-close" onclick="closeLeaveEditModal()">✕</button>
+            <div class="leave-header"><h2 id="leaveEditTitle">Chỉnh sửa đơn phép</h2></div>
+            <div class="leave-form">
+                <div id="leaveEditItems" class="leave-edit-items"></div>
+                <button type="button" class="leave-submit" onclick="saveLeaveEdits()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= MODAL: CHI TIẾT HỌC SINH ================= -->
     <div id="studentModal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close" onclick="closeStudentModal()">✕</button>
             <div id="modalResult"></div>
+        </div>
+    </div>
+
+    <div id="monthlyReportModal" class="modal-overlay hidden">
+        <div class="modal-content monthly-report-modal">
+            <button class="modal-close" onclick="closeMonthlyReportModal()">✕</button>
+            <div class="student-header"><h2>Báo cáo tháng</h2></div>
+            <div class="monthly-report-body">
+                <label for="monthlyReportMonth">Chọn tháng</label>
+                <div class="monthly-report-controls">
+                    <select id="monthlyReportMonth" aria-label="Chọn tháng"></select>
+                    <button class="leave-submit" onclick="generateMonthlyReport()">Tạo báo cáo</button>
+                    <label class="monthly-days-off-toggle" for="monthlyCatechismDaysOffEnabled">
+                        <input id="monthlyCatechismDaysOffEnabled" type="checkbox" onchange="toggleMonthlyDaysOff()">
+                        Ngày nghỉ GL
+                    </label>
+                    <div id="monthlyReportActions" class="monthly-report-actions hidden">
+                        <button class="monthly-excel" onclick="downloadMonthlyReportExcel()"><span class="material-icons-round">table_view</span> Tải Excel</button>
+                        <button class="monthly-image" onclick="downloadMonthlyReportImage()"><span class="material-icons-round">image</span> Tải ảnh</button>
+                    </div>
+                </div>
+                <div id="monthlyDaysOffFields" class="monthly-days-off-fields hidden">
+                    <input id="monthlyCatechismDaysOff" type="number" min="0" step="1" placeholder="Số ngày nghỉ" oninput="previewMonthlyDaysOff()">
+                    <input id="monthlyDaysOffNote" type="text" placeholder="Nội dung nghỉ" oninput="previewMonthlyDaysOff()">
+                </div>
+                <div id="monthlyReportResult"></div>
+            </div>
         </div>
     </div>
 
@@ -3900,9 +4152,11 @@ button.btn-report {
         // ============================================================
         // TIỆN ÍCH DÙNG CHUNG
         // ============================================================
-        function showToast(msg) {
+        function showToast(msg, type = 'warning') {
             const t = document.getElementById('toast');
             document.getElementById('toastMsg').textContent = msg;
+            document.getElementById('toastIcon').textContent = type === 'success' ? 'check_circle' : 'warning';
+            t.classList.toggle('success', type === 'success');
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2500);
         }
@@ -4356,7 +4610,7 @@ button.btn-report {
                 const scrollTop = tableWrapper ? tableWrapper.scrollTop : 0;
                 filterStudents();
                 if (tableWrapper) tableWrapper.scrollTop = scrollTop;
-                showToast('Đã cập nhật tình trạng');
+                showToast('Đã cập nhật tình trạng', 'success');
             } catch (err) {
                 select.value = previousStatus;
                 showToast(err.message);
@@ -4378,6 +4632,7 @@ button.btn-report {
                     <td>${item.mass ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
                     <td>${item.catechism ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
                     <td>${item.adoration ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
+                    <td>${item.confession ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
                 </tr>
                 `;
             }).join('');
@@ -4420,6 +4675,7 @@ button.btn-report {
                             ${total} buổi điểm danh
                         </div>
                     </div>
+                    ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
                 </div>
             </div>
 
@@ -4442,8 +4698,8 @@ button.btn-report {
                 </div>
                 <div class="stat-box mix">
                     <div class="stat-icon"><span class="material-icons-round">history</span></div>
-                    <div class="stat-number" data-target="${attendance.length}">0</div>
-                    <div class="stat-label">Lần Điểm Danh</div>
+                    <div class="stat-number" data-target="${data.confession || 0}">0</div>
+                    <div class="stat-label">Lần Xưng Tội</div>
                 </div>
             </div>
 
@@ -4467,6 +4723,7 @@ button.btn-report {
                                         <th>Thánh Lễ</th>
                                         <th>Giáo Lý</th>
                                         <th>Chầu TT</th>
+                                        <th>Xưng Tội</th>
                                     </tr>
                                 </thead>
                                 <tbody>${rows}</tbody>
@@ -4880,7 +5137,9 @@ button.btn-report {
 
             result.innerHTML = `
                 <div class="attendance-result-card" style="padding:16px;text-align:center;color:var(--blue-deep);font-weight:700;">
-                    Đang lấy dữ liệu điểm danh...
+                    <div>Đang lấy dữ liệu điểm danh...</div>
+                    <div class="attendance-progress-track"><div id="attendanceProgressBar" class="attendance-progress-bar"></div></div>
+                    <div id="attendanceProgressText" class="attendance-progress-text">Đang chuẩn bị...</div>
                 </div>`;
 
             try {
@@ -4900,10 +5159,42 @@ button.btn-report {
                     }
                 );
 
-                const data = await res.json();
+                if (!res.ok || !res.body) throw new Error(`Không thể kết nối Server: ${res.status}`);
 
-                if (!data.success)
-                    throw new Error(data.error);
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let data = null;
+
+                const handleEvent = packet => {
+                    const event = packet.match(/^event:\s*(.+)$/m)?.[1]?.trim();
+                    const rawData = packet.match(/^data:\s*(.+)$/m)?.[1];
+                    if (!event || !rawData) return;
+                    const payload = JSON.parse(rawData);
+                    if (event === 'progress') {
+                        const ratio = payload.phase === 'writing'
+                            ? 92
+                            : Math.round((payload.current / Math.max(payload.total, 1)) * 85);
+                        document.getElementById('attendanceProgressBar').style.width = `${ratio}%`;
+                        document.getElementById('attendanceProgressText').textContent = payload.message || 'Đang xử lý...';
+                    } else if (event === 'complete') {
+                        data = payload;
+                    } else if (event === 'error') {
+                        throw new Error(payload.error || 'Không thể lấy điểm danh');
+                    }
+                };
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+                    const packets = buffer.split('\n\n');
+                    buffer = packets.pop();
+                    packets.forEach(handleEvent);
+                    if (done) break;
+                }
+
+                if (!data?.success) throw new Error(data?.error || 'Không thể lấy điểm danh');
+                document.getElementById('attendanceProgressBar').style.width = '100%';
 
                 const totalUpdated = data.results.reduce((total, item) => total + (item.count || 0), 0);
                 const rows = data.results.map(item => {
@@ -4912,7 +5203,7 @@ button.btn-report {
                     return `
                         <div class="attendance-result-row">
                             <span class="attendance-result-date">${displayDate}</span>
-                            <span class="attendance-result-count">${item.count || 0} học viên</span>
+                            <span class="attendance-result-count">${item.error ? escapeHtml(item.error) : `${item.count || 0} học viên`}</span>
                         </div>`;
                 }).join('');
 
@@ -5205,6 +5496,189 @@ button.btn-report {
                 .classList.add('hidden');
         }
 
+        function openMonthlyReportModal() {
+            const now = new Date();
+            const monthSelect = document.getElementById('monthlyReportMonth');
+            const year = now.getFullYear();
+            monthSelect.innerHTML = [year, year - 1].flatMap(optionYear =>
+                Array.from({ length: 12 }, (_, index) => {
+                    const month = String(index + 1).padStart(2, '0');
+                    return `<option value="${optionYear}-${month}">Tháng ${index + 1}/${optionYear}</option>`;
+                })
+            ).join('');
+            monthSelect.value = `${year}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('monthlyCatechismDaysOffEnabled').checked = false;
+            document.getElementById('monthlyCatechismDaysOff').value = '';
+            document.getElementById('monthlyDaysOffNote').value = '';
+            toggleMonthlyDaysOff();
+            document.getElementById('monthlyReportResult').innerHTML = '';
+            document.getElementById('monthlyReportActions').classList.add('hidden');
+            document.getElementById('monthlyReportModal').classList.remove('hidden');
+        }
+
+        function closeMonthlyReportModal() {
+            document.getElementById('monthlyReportModal').classList.add('hidden');
+        }
+
+        let monthlyReportData = null;
+        let monthlyReportLabel = '';
+        let monthlyDaysOffNote = '';
+
+        function toggleMonthlyDaysOff() {
+            const enabled = document.getElementById('monthlyCatechismDaysOffEnabled').checked;
+            document.getElementById('monthlyDaysOffFields').classList.toggle('hidden', !enabled);
+            previewMonthlyDaysOff();
+        }
+
+        function previewMonthlyDaysOff() {
+            if (!monthlyReportData) return;
+            const enabled = document.getElementById('monthlyCatechismDaysOffEnabled').checked;
+            const requestedDaysOff = enabled
+                ? Math.max(0, Number.parseInt(document.getElementById('monthlyCatechismDaysOff').value, 10) || 0)
+                : 0;
+            const daysOff = Math.min(monthlyReportData.scheduledCatechism, requestedDaysOff);
+            monthlyDaysOffNote = enabled ? document.getElementById('monthlyDaysOffNote').value.trim() : '';
+            monthlyReportData.catechismDaysOff = daysOff;
+            monthlyReportData.effectiveCatechismDays = monthlyReportData.scheduledCatechism - daysOff;
+
+            monthlyReportData.students.forEach((student, index) => {
+                student.catechismAbsent = Math.max(0, monthlyReportData.effectiveCatechismDays - student.catechismPresent);
+                const row = document.querySelector(`#monthlyReportResult tr[data-student-index="${index}"]`);
+                if (!row) return;
+                row.querySelector('.monthly-catechism-absent').textContent = student.catechismAbsent;
+                row.querySelector('.monthly-catechism-present').classList.toggle('monthly-absence-cell', student.catechismAbsent > 0);
+                row.querySelector('.monthly-catechism-absent').classList.toggle('monthly-absence-cell', student.catechismAbsent > 0);
+            });
+
+            const summary = document.getElementById('monthlyReportSummaryNote');
+            if (summary) {
+                summary.textContent = `${monthlyReportLabel} · Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi${daysOff ? ` (nghỉ ${daysOff} ngày)` : ''}`;
+            }
+            const note = document.getElementById('monthlyReportDaysOffNote');
+            if (note) {
+                note.textContent = daysOff ? `Nghỉ Giáo Lý: ${daysOff} ngày${monthlyDaysOffNote ? ` · ${monthlyDaysOffNote}` : ''}` : '';
+                note.classList.toggle('hidden', !daysOff);
+            }
+        }
+
+        async function generateMonthlyReport() {
+            const month = document.getElementById('monthlyReportMonth').value;
+            const result = document.getElementById('monthlyReportResult');
+            const daysOffEnabled = document.getElementById('monthlyCatechismDaysOffEnabled').checked;
+            const daysOff = daysOffEnabled
+                ? Math.max(0, Number.parseInt(document.getElementById('monthlyCatechismDaysOff').value, 10) || 0)
+                : 0;
+            monthlyDaysOffNote = daysOffEnabled ? document.getElementById('monthlyDaysOffNote').value.trim() : '';
+            if (!month) {
+                showToast('Vui lòng chọn tháng');
+                return;
+            }
+            result.innerHTML = '<div class="leave-empty">Đang tổng hợp báo cáo tháng...</div>';
+            try {
+                const res = await fetch(api(`/monthly-attendance-report?month=${encodeURIComponent(month)}&catechismDaysOff=${daysOff}`));
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tạo báo cáo');
+
+                const label = new Date(`${month}-01T00:00:00`).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                monthlyReportData = data;
+                monthlyReportLabel = label;
+                document.getElementById('monthlyReportActions').classList.remove('hidden');
+                result.innerHTML = `
+                    <div id="monthlyReportSummaryNote" class="monthly-report-note">${escapeHtml(label)} · Thánh Lễ dự kiến: ${data.scheduledMass} buổi · Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi${data.catechismDaysOff ? ` (nghỉ ${data.catechismDaysOff} ngày)` : ''}</div>
+                    <div id="monthlyReportDaysOffNote" class="monthly-report-note ${data.catechismDaysOff ? '' : 'hidden'}">${data.catechismDaysOff ? `Nghỉ Giáo Lý: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}` : ''}</div>
+                    <div class="monthly-report-table-wrap">
+                        <table class="monthly-report-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">STT</th>
+                                    <th rowspan="2">Họ tên</th>
+                                    <th rowspan="2">TT học viên</th>
+                                    <th colspan="2">Thánh Lễ</th>
+                                    <th colspan="2">Giáo Lý</th>
+                                </tr>
+                                <tr><th>Hiện diện</th><th>Vắng</th><th>Hiện diện</th><th>Vắng</th></tr>
+                            </thead>
+                            <tbody>
+                                ${data.students.map((student, index) => `
+                                    <tr data-student-index="${index}">
+                                        <td>${index + 1}</td>
+                                        <td>${escapeHtml(student.name)}</td>
+                                        <td>${escapeHtml(student.status || '—')}</td>
+                                        <td class="${student.massAbsent > 0 ? 'monthly-absence-cell' : ''}">${student.massPresent}</td>
+                                        <td class="${student.massAbsent > 0 ? 'monthly-absence-cell' : ''}">${student.massAbsent}</td>
+                                        <td class="monthly-catechism-present ${student.catechismAbsent > 0 ? 'monthly-absence-cell' : ''}">${student.catechismPresent}</td>
+                                        <td class="monthly-catechism-absent ${student.catechismAbsent > 0 ? 'monthly-absence-cell' : ''}">${student.catechismAbsent}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+            } catch (err) {
+                result.innerHTML = `<div class="leave-empty">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function downloadMonthlyReportExcel() {
+            if (!monthlyReportData) return;
+            const data = monthlyReportData;
+            const rows = [
+                ['BÁO CÁO ĐIỂM DANH ' + monthlyReportLabel.toUpperCase()],
+                [`Thánh Lễ dự kiến: ${data.scheduledMass} buổi`, '', '', `Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi`]
+            ];
+            if (data.catechismDaysOff) {
+                rows.push([`Nghỉ Giáo Lý: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` - ${monthlyDaysOffNote}` : ''}`]);
+            }
+            const headerRow = rows.length;
+            rows.push(
+                ['STT', 'Họ tên', 'TT học viên', 'Thánh Lễ', '', 'Giáo Lý', ''],
+                ['', '', '', 'Hiện diện', 'Vắng', 'Hiện diện', 'Vắng'],
+                ...data.students.map((student, index) => [
+                    index + 1, student.name, student.status || '', student.massPresent,
+                    student.massAbsent, student.catechismPresent, student.catechismAbsent
+                ])
+            );
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+                { s: { r: headerRow, c: 3 }, e: { r: headerRow, c: 4 } },
+                { s: { r: headerRow, c: 5 }, e: { r: headerRow, c: 6 } }
+            ];
+            ws['!cols'] = [{ wch: 7 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo tháng');
+            XLSX.writeFile(wb, `Bao_cao_thang_${monthlyReportData.month}.xlsx`);
+        }
+
+        async function downloadMonthlyReportImage() {
+            const table = document.querySelector('#monthlyReportResult .monthly-report-table');
+            if (!table || !monthlyReportData) return;
+            const printable = document.createElement('div');
+            await document.fonts.ready;
+            printable.style.cssText = "position:fixed;left:-10000px;top:0;width:980px;padding:28px;background:#fff;color:#111;font-family:'Be Vietnam Pro',Arial,sans-serif;";
+            printable.innerHTML = `<h2 style="margin:0 0 8px;color:#5b21b6;text-align:center;">BÁO CÁO ĐIỂM DANH ${escapeHtml(monthlyReportLabel).toUpperCase()}</h2><p style="margin:0 0 8px;text-align:center;font-size:14px;">Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi</p>${monthlyReportData.catechismDaysOff ? `<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#9f1239;">Nghỉ Giáo Lý: ${monthlyReportData.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}</p>` : '<div style="height:10px"></div>'}`;
+            const copy = table.cloneNode(true);
+            copy.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;';
+            copy.querySelectorAll('th, td').forEach(cell => {
+                cell.style.position = 'static';
+                cell.style.border = '1px solid #c4b5fd';
+                cell.style.padding = '9px';
+                cell.style.textAlign = cell.cellIndex === 1 ? 'left' : 'center';
+            });
+            copy.querySelectorAll('th').forEach(cell => { cell.style.background = '#ede9fe'; cell.style.color = '#4c1d95'; });
+            copy.querySelectorAll('.monthly-absence-cell').forEach(cell => { cell.style.background = '#fff1f2'; cell.style.color = '#9f1239'; });
+            printable.appendChild(copy);
+            document.body.appendChild(printable);
+            try {
+                const canvas = await html2canvas(printable, { scale: 2, backgroundColor: '#ffffff', logging: false });
+                const link = document.createElement('a');
+                link.download = `Bao_cao_thang_${monthlyReportData.month}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } finally {
+                printable.remove();
+            }
+        }
+
         async function exportReportImage(){
 
             const element =
@@ -5228,6 +5702,202 @@ button.btn-report {
                 canvas.toDataURL('image/png');
 
             link.click();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[char]);
+        }
+
+        async function openLeaveModal() {
+            document.getElementById('leaveModal').classList.remove('hidden');
+            await loadLeaveRequests();
+        }
+
+        function closeLeaveModal() {
+            document.getElementById('leaveModal').classList.add('hidden');
+        }
+
+        async function loadLeaveRequests() {
+            const container = document.getElementById('leaveRequestsList');
+            container.innerHTML = '<div class="leave-empty">Đang tải danh sách đơn phép...</div>';
+
+            try {
+                const res = await fetch(api('/leave-requests'));
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Không thể tải đơn phép');
+
+                if (!data.requests.length) {
+                    container.innerHTML = '<div class="leave-empty">Chưa có học viên nào có đơn phép.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.requests.map(item => `
+                    <div class="leave-item" onclick="openLeaveEditModal('${escapeHtml(item.studentId)}')">
+                        <div class="leave-item-name">${escapeHtml(item.name)} <span class="leave-count">${item.excusedCount || 0} đơn vắng</span></div>
+                        <div class="leave-item-meta">${escapeHtml(item.studentId)} · ${escapeHtml(item.className)}</div>
+                        <div class="leave-item-text">${escapeHtml(item.leave)}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="leave-empty">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function openLeaveFormModal() {
+            document.getElementById('leaveForm').reset();
+            document.getElementById('leaveStudentId').value = '';
+            document.getElementById('leaveStudentOptions').classList.add('hidden');
+            const today = new Date();
+            document.getElementById('leaveAbsenceDate').value =
+                `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            toggleLeaveFields();
+            document.getElementById('leaveFormModal').classList.remove('hidden');
+            document.getElementById('leaveStudentSearch').focus();
+        }
+
+        function closeLeaveFormModal() {
+            document.getElementById('leaveFormModal').classList.add('hidden');
+        }
+
+        let editingLeaveRequest = null;
+
+        async function openLeaveEditModal(studentId) {
+            const list = document.getElementById('leaveEditItems');
+            document.getElementById('leaveEditModal').classList.remove('hidden');
+            list.innerHTML = '<div class="leave-empty">Đang tải đơn phép...</div>';
+            try {
+                const res = await fetch(api('/leave-requests'));
+                const data = await res.json();
+                const item = data.requests?.find(request => String(request.studentId) === String(studentId));
+                if (!res.ok || !item) throw new Error('Không tìm thấy đơn phép');
+                editingLeaveRequest = item;
+                document.getElementById('leaveEditTitle').textContent = `Đơn phép — ${item.name}`;
+                renderLeaveEditItems(item.leaveItems || []);
+            } catch (err) {
+                list.innerHTML = `<div class="leave-empty">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderLeaveEditItems(items) {
+            const list = document.getElementById('leaveEditItems');
+            if (!items.length) {
+                list.innerHTML = '<div class="leave-edit-empty">Đã gỡ hết đơn. Nhấn “Lưu thay đổi” để cập nhật Sheet.</div>';
+                return;
+            }
+            list.innerHTML = items.map((item, index) => `
+                <div class="leave-edit-row">
+                    <input type="text" value="${escapeHtml(item)}" aria-label="Đơn phép ${index + 1}">
+                    <button type="button" class="leave-remove-button" onclick="removeLeaveEditItem(${index})" title="Gỡ đơn này"><span class="material-icons-round">delete</span></button>
+                </div>
+            `).join('');
+        }
+
+        function removeLeaveEditItem(index) {
+            editingLeaveRequest.leaveItems.splice(index, 1);
+            renderLeaveEditItems(editingLeaveRequest.leaveItems);
+        }
+
+        function closeLeaveEditModal() {
+            document.getElementById('leaveEditModal').classList.add('hidden');
+            editingLeaveRequest = null;
+        }
+
+        async function saveLeaveEdits() {
+            if (!editingLeaveRequest) return;
+            const inputs = [...document.querySelectorAll('#leaveEditItems input')];
+            const leaveItems = inputs.length ? inputs.map(input => input.value.trim()).filter(Boolean) : [];
+            try {
+                const res = await fetch(api(`/leave-requests/${encodeURIComponent(editingLeaveRequest.studentId)}`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leaveItems })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể lưu thay đổi');
+                closeLeaveEditModal();
+                await loadLeaveRequests();
+                showToast('Đã cập nhật đơn phép', 'success');
+            } catch (err) {
+                showToast(err.message);
+            }
+        }
+
+        function filterLeaveStudents() {
+            const input = document.getElementById('leaveStudentSearch');
+            const query = normalizeText(input.value.trim());
+            const options = document.getElementById('leaveStudentOptions');
+
+            if (!query) {
+                options.classList.add('hidden');
+                return;
+            }
+
+            const matches = allStudents.filter(student =>
+                normalizeText(student.name).includes(query) ||
+                normalizeText(student.studentId).includes(query)
+            ).slice(0, 8);
+
+            if (!matches.length) {
+                options.innerHTML = '<div class="leave-student-option"><span>Không tìm thấy học viên</span></div>';
+                options.classList.remove('hidden');
+                return;
+            }
+
+            options.innerHTML = matches.map(student => `
+                <div class="leave-student-option" onclick="selectLeaveStudent('${student.studentId}')">
+                    <strong>${escapeHtml(student.name)}</strong>
+                    <span>${escapeHtml(student.studentId)} · ${escapeHtml(student.className)}</span>
+                </div>
+            `).join('');
+            options.classList.remove('hidden');
+        }
+
+        function selectLeaveStudent(studentId) {
+            const student = allStudents.find(item => String(item.studentId) === String(studentId));
+            if (!student) return;
+            document.getElementById('leaveStudentId').value = String(student.studentId);
+            document.getElementById('leaveStudentSearch').value = `${student.name} (${student.studentId})`;
+            document.getElementById('leaveStudentOptions').classList.add('hidden');
+        }
+
+        function toggleLeaveFields() {
+            const isMakeup = document.getElementById('leaveType').value === 'makeup';
+            document.getElementById('leaveMakeupField').classList.toggle('hidden', !isMakeup);
+            document.getElementById('leaveExcusedField').classList.toggle('hidden', isMakeup);
+        }
+
+        async function submitLeaveRequest(event) {
+            event.preventDefault();
+            const studentId = document.getElementById('leaveStudentId').value;
+            const type = document.getElementById('leaveType').value;
+
+            if (!studentId) {
+                showToast('Vui lòng chọn học viên từ danh sách');
+                return;
+            }
+
+            try {
+                const res = await fetch(api('/leave-requests'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId,
+                        type,
+                        replacementDay: document.getElementById('leaveReplacementDay').value.trim(),
+                        absenceDate: document.getElementById('leaveAbsenceDate').value
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể lưu đơn phép');
+
+                closeLeaveFormModal();
+                await loadLeaveRequests();
+                showToast('Đã lưu đơn phép', 'success');
+            } catch (err) {
+                showToast(err.message);
+            }
         }
 
         document.addEventListener('click', function(e){
