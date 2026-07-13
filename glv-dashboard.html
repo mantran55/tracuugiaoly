@@ -4040,6 +4040,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 <label for="monthlyReportMonth">Chọn tháng</label>
                 <div class="monthly-report-controls">
                     <select id="monthlyReportMonth" aria-label="Chọn tháng"></select>
+                    <select id="monthlyReportClass" aria-label="Chọn lớp"></select>
                     <button class="leave-submit" onclick="generateMonthlyReport()">Tạo báo cáo</button>
                     <label class="monthly-days-off-toggle" for="monthlyCatechismDaysOffEnabled">
                         <input id="monthlyCatechismDaysOffEnabled" type="checkbox" onchange="toggleMonthlyDaysOff()">
@@ -5507,6 +5508,11 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 })
             ).join('');
             monthSelect.value = `${year}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const classSelect = document.getElementById('monthlyReportClass');
+            const classes = [...new Set(allStudents.map(student => student.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+            classSelect.innerHTML = '<option value="">Tất cả lớp</option>' + classes.map(className =>
+                `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`
+            ).join('');
             document.getElementById('monthlyCatechismDaysOffEnabled').checked = false;
             document.getElementById('monthlyCatechismDaysOff').value = '';
             document.getElementById('monthlyDaysOffNote').value = '';
@@ -5552,7 +5558,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
 
             const summary = document.getElementById('monthlyReportSummaryNote');
             if (summary) {
-                summary.textContent = `${monthlyReportLabel} · Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi${daysOff ? ` (nghỉ ${daysOff} ngày)` : ''}`;
+                summary.textContent = `${monthlyReportLabel}${monthlyReportData.className ? ` · Lớp ${monthlyReportData.className}` : ''} · Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi${daysOff ? ` (nghỉ ${daysOff} ngày)` : ''}`;
             }
             const note = document.getElementById('monthlyReportDaysOffNote');
             if (note) {
@@ -5563,6 +5569,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
 
         async function generateMonthlyReport() {
             const month = document.getElementById('monthlyReportMonth').value;
+            const className = document.getElementById('monthlyReportClass').value;
             const result = document.getElementById('monthlyReportResult');
             const daysOffEnabled = document.getElementById('monthlyCatechismDaysOffEnabled').checked;
             const daysOff = daysOffEnabled
@@ -5575,7 +5582,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             }
             result.innerHTML = '<div class="leave-empty">Đang tổng hợp báo cáo tháng...</div>';
             try {
-                const res = await fetch(api(`/monthly-attendance-report?month=${encodeURIComponent(month)}&catechismDaysOff=${daysOff}`));
+                const res = await fetch(api(`/monthly-attendance-report?month=${encodeURIComponent(month)}&className=${encodeURIComponent(className)}&catechismDaysOff=${daysOff}`));
                 const data = await res.json();
                 if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tạo báo cáo');
 
@@ -5584,7 +5591,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 monthlyReportLabel = label;
                 document.getElementById('monthlyReportActions').classList.remove('hidden');
                 result.innerHTML = `
-                    <div id="monthlyReportSummaryNote" class="monthly-report-note">${escapeHtml(label)} · Thánh Lễ dự kiến: ${data.scheduledMass} buổi · Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi${data.catechismDaysOff ? ` (nghỉ ${data.catechismDaysOff} ngày)` : ''}</div>
+                    <div id="monthlyReportSummaryNote" class="monthly-report-note">${escapeHtml(label)}${data.className ? ` · Lớp ${escapeHtml(data.className)}` : ''} · Thánh Lễ dự kiến: ${data.scheduledMass} buổi · Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi${data.catechismDaysOff ? ` (nghỉ ${data.catechismDaysOff} ngày)` : ''}</div>
                     <div id="monthlyReportDaysOffNote" class="monthly-report-note ${data.catechismDaysOff ? '' : 'hidden'}">${data.catechismDaysOff ? `Nghỉ Giáo Lý: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}` : ''}</div>
                     <div class="monthly-report-table-wrap">
                         <table class="monthly-report-table">
@@ -5622,7 +5629,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             if (!monthlyReportData) return;
             const data = monthlyReportData;
             const rows = [
-                ['BÁO CÁO ĐIỂM DANH ' + monthlyReportLabel.toUpperCase()],
+                ['BÁO CÁO ĐIỂM DANH ' + monthlyReportLabel.toUpperCase() + (data.className ? ` - LỚP ${data.className.toUpperCase()}` : '')],
                 [`Thánh Lễ dự kiến: ${data.scheduledMass} buổi`, '', '', `Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi`]
             ];
             if (data.catechismDaysOff) {
@@ -5655,7 +5662,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             const printable = document.createElement('div');
             await document.fonts.ready;
             printable.style.cssText = "position:fixed;left:-10000px;top:0;width:980px;padding:28px;background:#fff;color:#111;font-family:'Be Vietnam Pro',Arial,sans-serif;";
-            printable.innerHTML = `<h2 style="margin:0 0 8px;color:#5b21b6;text-align:center;">BÁO CÁO ĐIỂM DANH ${escapeHtml(monthlyReportLabel).toUpperCase()}</h2><p style="margin:0 0 8px;text-align:center;font-size:14px;">Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi</p>${monthlyReportData.catechismDaysOff ? `<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#9f1239;">Nghỉ Giáo Lý: ${monthlyReportData.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}</p>` : '<div style="height:10px"></div>'}`;
+            printable.innerHTML = `<h2 style="margin:0 0 8px;color:#5b21b6;text-align:center;">BÁO CÁO ĐIỂM DANH ${escapeHtml(monthlyReportLabel).toUpperCase()}</h2><p style="margin:0 0 8px;text-align:center;font-size:14px;">${monthlyReportData.className ? `Lớp ${escapeHtml(monthlyReportData.className)} · ` : ''}Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi</p>${monthlyReportData.catechismDaysOff ? `<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#9f1239;">Nghỉ Giáo Lý: ${monthlyReportData.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}</p>` : '<div style="height:10px"></div>'}`;
             const copy = table.cloneNode(true);
             copy.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;';
             copy.querySelectorAll('th, td').forEach(cell => {
