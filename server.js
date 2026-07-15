@@ -589,6 +589,47 @@ app.get("/leave-requests", async (req, res) => {
   }
 });
 
+// =========================
+// API: Điểm danh tự động từ Google Apps Script / lịch hẹn
+// =========================
+app.post("/scheduled-import", async (req, res) => {
+  try {
+    const suppliedSecret = String(req.get("x-automation-key") || req.body.secret || "");
+    const expectedSecret = String(process.env.AUTOMATION_SECRET || "");
+    if (!expectedSecret || suppliedSecret !== expectedSecret) {
+      return res.status(401).json({ success: false, error: "Không có quyền chạy điểm danh tự động" });
+    }
+
+    const group = getGroup(req);
+    const date = String(req.body.date || "").trim();
+    const classId = String(req.body.classId || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !classId) {
+      return res.status(400).json({ success: false, error: "Thiếu ngày hoặc mã lớp CCAMS" });
+    }
+
+    const result = await importAttendance(date, classId, group);
+    const lastUpdated = formatShortDateVN(date);
+    const sheets = await getSheetsClient();
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_GROUPS[group],
+      range: `${ATTENDANCE_SHEET}!G1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[`cập nhật gần đây: ${lastUpdated}`]] }
+    });
+
+    return res.json({
+      success: true,
+      group,
+      date,
+      count: result.count,
+      lastUpdated: `cập nhật gần đây: ${lastUpdated}`
+    });
+  } catch (err) {
+    console.error("Lỗi điểm danh tự động:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Chỉnh sửa hoặc gỡ từng đơn phép; mảng leaveItems được nối lại bằng " ; " trong Sheet.
 app.put("/leave-requests/:id", async (req, res) => {
   try {
@@ -1189,7 +1230,9 @@ async function importAttendance(date, classId, group) {
 
   }
 
-  await loadSheetData(group);
+  // Không đọc lại cả 3 sheet sau khi vừa ghi; lần request sau sẽ tự nạp cache mới.
+  state.cacheData = null;
+  state.cacheTimestamp = 0;
 
   return {
     count: updates.length,
