@@ -3735,6 +3735,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
 .leave-student-option strong { display: block; font-size: 13px; }
 .leave-student-option span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 11px; }
 .leave-submit { width: 100%; min-height: 46px; margin-top: 22px; border: 0; border-radius: 11px; background: linear-gradient(135deg, #d97706, #b45309); color: white; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.leave-submit:disabled, .report-generate-button:disabled { opacity:.65; cursor:wait; }
 
 @media (max-width: 768px) {
     .attendance-modal {
@@ -5428,7 +5429,10 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             );
         }
        
+        let isGeneratingDailyReport = false;
+
         async function generateReport() {
+            if (isGeneratingDailyReport) return;
 
             const rawDate =
                 document.getElementById('reportDate').value;
@@ -5440,6 +5444,11 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 alert('Vui lòng chọn ngày');
                 return;
             }
+
+            const button = document.getElementById('generateDailyReportButton');
+            isGeneratingDailyReport = true;
+            button.disabled = true;
+            button.textContent = 'Đang tạo báo cáo...';
 
             const d = new Date(rawDate);
 
@@ -5470,6 +5479,10 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 console.error(err);
                 alert('Lỗi tải dữ liệu');
 
+            } finally {
+                isGeneratingDailyReport = false;
+                button.disabled = false;
+                button.textContent = 'Tạo báo cáo';
             }
         }
 
@@ -5875,8 +5888,11 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             document.getElementById('leaveExcusedField').classList.toggle('hidden', isMakeup);
         }
 
+        let isSavingLeaveRequest = false;
+
         async function submitLeaveRequest(event) {
             event.preventDefault();
+            if (isSavingLeaveRequest) return;
             const studentId = document.getElementById('leaveStudentId').value;
             const type = document.getElementById('leaveType').value;
 
@@ -5884,6 +5900,11 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 showToast('Vui lòng chọn học viên từ danh sách');
                 return;
             }
+
+            const button = event.submitter || document.querySelector('#leaveForm button[type="submit"]');
+            isSavingLeaveRequest = true;
+            button.disabled = true;
+            button.textContent = 'Đang lưu...';
 
             try {
                 const res = await fetch(api('/leave-requests'), {
@@ -5904,6 +5925,10 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 showToast('Đã lưu đơn phép', 'success');
             } catch (err) {
                 showToast(err.message);
+            } finally {
+                isSavingLeaveRequest = false;
+                button.disabled = false;
+                button.textContent = 'Lưu đơn phép';
             }
         }
 
@@ -5949,7 +5974,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 <label>Lớp</label>
                 <select id="reportClass"></select>
 
-                <button onclick="generateReport()">
+                <button id="generateDailyReportButton" class="report-generate-button" onclick="generateReport()">
                     Tạo báo cáo
                 </button>
 
