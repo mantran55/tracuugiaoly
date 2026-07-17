@@ -6,6 +6,7 @@ const cors = require("cors");
 const { google } = require("googleapis");
 const {
   getCCAMS,
+  getCCAMSStudentProfile,
   getAttendanceByClass,
   getCCAMSClasses
 } = require("./services/ccams");
@@ -483,6 +484,7 @@ app.get("/student/:id", async (req, res) => {
     
     // Gọi 1 lần duy nhất
     const score = state.scoreMap[studentId] || {};
+    const ccamsProfile = await getCCAMSStudentProfile(studentId);
 
     return res.json({
       success: true,
@@ -494,6 +496,10 @@ app.get("/student/:id", async (req, res) => {
       leave: state.leaveMap[studentId] || "",
       leaveItems: splitLeaveItems(state.leaveMap[studentId]),
       group,
+      dateOfBirth: ccamsProfile.dateOfBirth || "",
+      fatherName: ccamsProfile.fatherName || "",
+      motherName: ccamsProfile.motherName || "",
+      phones: ccamsProfile.phones || [],
       avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
       totalMass: Number(studentRow[5] || 0),
       catechism: Number(studentRow[8] || 0),
@@ -517,7 +523,7 @@ app.put("/student/:id/status", async (req, res) => {
     const group = getGroup(req);
     const studentId = String(req.params.id || "").trim();
     const status = String(req.body.status || "").trim();
-    const allowedStatuses = ["đang học", "nghỉ ngang", "nghỉ từ đầu", "chuyển xứ", "nợ bài"];
+    const allowedStatuses = ["đang học', 'nghỉ ngang', 'nghỉ từ đầu', 'chuyển xứ', 'nợ bài', 'thiếu điểm lễ', 'thiếu điểm giáo lý"];
 
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: "Tình trạng không hợp lệ" });
