@@ -523,7 +523,15 @@ app.put("/student/:id/status", async (req, res) => {
     const group = getGroup(req);
     const studentId = String(req.params.id || "").trim();
     const status = String(req.body.status || "").trim();
-    const allowedStatuses = ["đang học', 'nghỉ ngang', 'nghỉ từ đầu', 'chuyển xứ', 'nợ bài', 'thiếu điểm lễ', 'thiếu điểm giáo lý"];
+    const allowedStatuses = [
+      "\u0111ang h\u1ecdc",
+      "ngh\u1ec9 ngang",
+      "ngh\u1ec9 t\u1eeb \u0111\u1ea7u",
+      "chuy\u1ec3n x\u1ee9",
+      "n\u1ee3 b\u00e0i",
+      "thi\u1ebfu \u0111i\u1ec3m l\u1ec5",
+      "thi\u1ebfu \u0111i\u1ec3m gi\u00e1o l\u00fd"
+    ];
 
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: "Tình trạng không hợp lệ" });
