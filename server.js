@@ -847,6 +847,66 @@ app.get("/monthly-attendance-report", async (req, res) => {
 });
 
 // =========================
+// API: Học viên cần quan tâm
+// =========================
+app.get("/attention-students", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    await getSheetData(group);
+    const state = getState(group);
+    const today = new Date();
+    const headers = state.cacheData?.[2] || [];
+    const attendanceDates = headers.map((header, index) => {
+      const date = parseAttendanceHeaderDate(header, today.getFullYear());
+      if (!date) return null;
+      const value = new Date(date.year, date.month - 1, date.day);
+      return value <= today ? { index, weekday: value.getDay(), value } : null;
+    }).filter(Boolean).sort((a, b) => a.value - b.value);
+
+    const catechismDates = attendanceDates.filter(item => item.weekday === 0).slice(-3);
+    const massDates = attendanceDates.filter(item => item.weekday === 0 || item.weekday === 4).slice(-3);
+    const attentionStatuses = new Set([
+      "ngh\u1ec9 ngang", "n\u1ee3 b\u00e0i", "thi\u1ebfu \u0111i\u1ec3m l\u1ec5", "thi\u1ebfu \u0111i\u1ec3m gi\u00e1o l\u00fd"
+    ]);
+
+    const students = Object.values(state.studentMap).map(row => {
+      const studentId = String(row[1] || "").trim();
+      const status = String(state.statusMap[studentId] || "").trim();
+      const reasons = [];
+      const isAbsent = (dateItem, symbol) => !String(row[dateItem.index] || "").toUpperCase().includes(symbol);
+
+      if (catechismDates.length === 3 && catechismDates.every(item => isAbsent(item, "G"))) {
+        reasons.push({ type: "catechism", label: "Vắng Giáo Lý 3 CN liên tiếp" });
+      }
+      if (massDates.length === 3 && massDates.every(item => isAbsent(item, "C"))) {
+        reasons.push({ type: "mass", label: "Vắng Thánh Lễ 3 buổi liên tiếp" });
+      }
+      if (attentionStatuses.has(status.toLowerCase())) {
+        reasons.push({ type: "status", label: status });
+      }
+
+      return reasons.length ? {
+        studentId,
+        name: row[2] || "",
+        className: row[3] || "",
+        status,
+        reasons
+      } : null;
+    }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, "vi"));
+
+    return res.json({
+      success: true,
+      total: students.length,
+      students,
+      criteria: { catechismDays: catechismDates.length, massDays: massDates.length }
+    });
+  } catch (err) {
+    console.error("Lỗi danh sách cần quan tâm:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
 // BACKGROUND TASK: Rebuild Summary Cache
 // =========================
 
