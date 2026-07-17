@@ -3,6 +3,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 
 const cache = {};
+const studentProfileCache = {};
 const CACHE_TIME = 3 * 60 * 1000; // 3 phút
 
 async function getCCAMS(phone) {
@@ -87,6 +88,41 @@ function clearCCAMSCache() {
   });
 
   console.log("🗑️ CCAMS cache cleared");
+}
+
+async function getCCAMSStudentProfile(studentId) {
+  const id = String(studentId || '').trim();
+  if (!id) return {};
+  const now = Date.now();
+  if (studentProfileCache[id] && now - studentProfileCache[id].timestamp < CACHE_TIME) {
+    return studentProfileCache[id].data;
+  }
+
+  try {
+    const response = await axios.get('https://ccams.thongtinxuanloc.com/search', {
+      params: { phone: '0857675733', search: id },
+      timeout: 15000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const $ = cheerio.load(response.data);
+    let profile = {};
+    $('table tr').each((_, row) => {
+      const cells = $(row).find('td');
+      if (String($(cells[1]).text() || '').trim() !== id) return;
+      const phoneText = String($(cells[8]).text() || '').trim();
+      profile = {
+        dateOfBirth: String($(cells[3]).text() || '').trim(),
+        fatherName: String($(cells[9]).text() || '').trim(),
+        motherName: String($(cells[10]).text() || '').trim(),
+        phones: phoneText.split(/[\n,;]+/).map(phone => phone.trim()).filter(Boolean)
+      };
+    });
+    studentProfileCache[id] = { timestamp: now, data: profile };
+    return profile;
+  } catch (error) {
+    console.error('CCAMS student profile error:', error.message);
+    return {};
+  }
 }
 
 
@@ -244,6 +280,7 @@ async function getCCAMSClasses() {
 
 module.exports = {
   getCCAMS,
+  getCCAMSStudentProfile,
   getAttendanceByClass,
   clearCCAMSCache,
   getCCAMSClasses,
