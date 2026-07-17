@@ -961,8 +961,16 @@
             color: var(--red);
             transform: rotate(90deg) scale(1.05);
         }
-        .modal-close .material-icons-round {
+.modal-close .material-icons-round {
             font-size: 20px;
+        }
+
+        /* Nút đóng hồ sơ luôn hiện khi cuộn nội dung dài. */
+        #studentModal .modal-close {
+            position: fixed;
+            top: max(14px, calc(5vh + 14px));
+            right: max(14px, calc(2.5vw + 10px));
+            z-index: 10001;
         }
 
         .student-header {
@@ -2304,6 +2312,10 @@
     }
     .modal-close .material-icons-round {
         font-size: 18px;
+    }
+    #studentModal .modal-close {
+        top: max(14px, calc(4vh + 10px));
+        right: 12px;
     }
 
     /* --- Student header trong modal --- */
@@ -4064,7 +4076,7 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     </div>
 
     <!-- ================= MODAL: CHI TIẾT HỌC SINH ================= -->
-    <div id="studentModal" class="modal-overlay hidden">
+    <div id="studentModal" class="modal-overlay hidden" onclick="handleStudentModalBackdrop(event)">
         <div class="modal-content">
             <button class="modal-close" onclick="closeStudentModal()">✕</button>
             <div id="modalResult"></div>
@@ -4599,6 +4611,10 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
                 refreshStudentTableStatus();
                 studentStatusChanged = false;
             }
+        }
+
+        function handleStudentModalBackdrop(event) {
+            if (event.target === event.currentTarget) closeStudentModal();
         }
 
         async function openStudent(studentId) {
