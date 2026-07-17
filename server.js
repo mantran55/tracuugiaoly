@@ -876,6 +876,7 @@ app.get("/attention-students", async (req, res) => {
     await getSheetData(group);
     const state = getState(group);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const headers = state.cacheData?.[2] || [];
     const firstRow = state.cacheData?.[0] || [];
     const configuredStart = parseAttendanceHeaderDate(firstRow[10], today.getFullYear()); // K1
@@ -886,6 +887,16 @@ app.get("/attention-students", async (req, res) => {
     const configuredEndDate = configuredEnd
       ? new Date(configuredEnd.year, configuredEnd.month - 1, configuredEnd.day)
       : today;
+    if (configuredEndDate < today) {
+      return res.json({
+        success: true,
+        total: 0,
+        students: [],
+        classes: [],
+        summerBreak: true,
+        endDate: configuredEndDate
+      });
+    }
     const endDate = configuredEndDate < today ? configuredEndDate : today;
     const attendanceDates = headers.map((header, index) => {
       const value = parseAttendanceDateInRange(header, startDate, endDate);
