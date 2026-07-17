@@ -3642,7 +3642,7 @@ button.btn-report {
 
 .leave-empty {
     padding: 34px 16px;
-    color: var(--text-muted);
+    color: #b1580b;
     text-align: center;
     font-size: 13px;
     font-weight: 600;
@@ -3669,8 +3669,30 @@ button.btn-report {
 .leave-edit-empty { padding:15px; border:1px dashed #fca5a5; border-radius:10px; color:#991b1b; font-size:13px; text-align:center; }
 .student-leave-box { margin-top:14px; padding:11px 12px; border:1px solid #fde68a; border-radius:11px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.55; }
 .student-leave-box strong { display:block; margin-bottom:4px; color:#78350f; }
+.family-info { display:grid; grid-template-columns:110px repeat(2,minmax(0,1fr)); gap:7px; margin-top:14px; }
+.family-info-item { padding:9px 10px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; color:var(--text-secondary); font-size:11px; line-height:1.45; min-width:0; }
+.family-info-item strong { display:flex; align-items:center; gap:4px; margin-bottom:2px; color:#64748b; font-size:9px; text-transform:uppercase; letter-spacing:.03em; }
+.family-info-item strong .material-icons-round { font-size:13px; color:var(--blue); }
+.family-info-item.family-phones { grid-column:1 / -1; background:#f0f7ff; }
+.copy-phone { margin:3px 5px 0 0; padding:5px 8px; border:1px solid #bfdbfe; border-radius:7px; background:white; color:#1d4ed8; font:inherit; font-size:11px; font-weight:800; cursor:pointer; }
+.copy-phone:hover { background:#dbeafe; }
 
 button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); color:white; }
+button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color:white; }
+.attention-modal { max-height:calc(100dvh - 24px); display:flex; flex-direction:column; overflow:hidden; }
+.attention-modal .leave-list { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:24px; }
+.attention-item { padding:13px 14px; border:1px solid #fecaca; border-radius:12px; background:#fff7f7; margin-bottom:10px; cursor:pointer; }
+.attention-item:last-child { margin-bottom:0; }
+.attention-item:hover { background:#fef2f2; }
+.attention-class-title { display:flex; align-items:center; justify-content:space-between; margin:16px 2px 8px; padding:0 2px 7px; border-bottom:1px solid #fecaca; color:#991b1b; font-size:13px; font-weight:850; }
+.attention-class-title:first-child { margin-top:0; }
+.attention-class-title span { color:#b91c1c; font-size:10px; font-weight:750; }
+.attention-name { color:var(--text); font-size:14px; font-weight:800; }
+.attention-meta { margin-top:3px; color:var(--text-secondary); font-size:11px; font-weight:700; }
+.attention-reasons { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+.attention-reason { padding:4px 7px; border-radius:999px; background:#fee2e2; color:#b91c1c; font-size:10px; font-weight:800; }
+.attention-reason.catechism { background:#ede9fe; color:#6d28d9; }
+.attention-reason.mass { background:#ffedd5; color:#c2410c; }
 .monthly-report-modal { width:min(1100px, calc(100vw - 24px)); max-height:calc(100dvh - 24px); display:flex; flex-direction:column; }
 .monthly-report-body { padding:20px; overflow:auto; }
 .monthly-report-body label { display:block; margin-bottom:7px; font-size:12px; font-weight:800; color:var(--text-secondary); }
@@ -3749,6 +3771,10 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
     .monthly-report-body select { width:calc(100% - 122px); }
     .monthly-report-controls { margin-top:10px; }
     .monthly-days-off-fields { grid-template-columns:1fr; }
+    .family-info { grid-template-columns:1fr; gap:8px; }
+    .family-info-item { padding:10px 12px; font-size:12px; }
+    .family-info-item.family-phones { padding:11px 12px; }
+    .copy-phone { min-height:36px; margin:5px 6px 0 0; padding:6px 10px; font-size:12px; }
 }
 
     </style>
@@ -3937,6 +3963,10 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                         <span class="material-icons-round">event_note</span>
                         <span>Đơn phép</span>
                     </button>
+                    <button class="btn-attention" onclick="openAttentionModal()">
+                        <span class="material-icons-round">priority_high</span>
+                        <span>Cần quan tâm</span>
+                    </button>
                 </div>
 
             </div>
@@ -3978,6 +4008,14 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                 </button>
             </div>
             <div id="leaveRequestsList" class="leave-list"></div>
+        </div>
+    </div>
+
+    <div id="attentionModal" class="modal-overlay hidden">
+        <div class="modal-content leave-modal attention-modal">
+            <button class="modal-close" onclick="closeAttentionModal()">✕</button>
+            <div class="leave-header"><h2>Học viên cần quan tâm</h2></div>
+            <div id="attentionStudentsList" class="leave-list"></div>
         </div>
     </div>
 
@@ -4538,8 +4576,29 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
         // ============================================================
         // MODAL: CHI TIẾT HỌC SINH
         // ============================================================
+        let studentStatusChanged = false;
+
+        function refreshStudentTableStatus() {
+            const tableWrapper = document.querySelector('.table-wrapper');
+            const scrollTop = tableWrapper ? tableWrapper.scrollTop : 0;
+            filterStudents();
+            if (tableWrapper) tableWrapper.scrollTop = scrollTop;
+        }
+
+        function updateVisibleStudentStatus(studentId, status) {
+            document.querySelectorAll('#studentTable tr').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (!cells.length || String(cells[0].textContent).trim() !== String(studentId)) return;
+                cells[2].innerHTML = `<span class="status-badge ${String(status).toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${escapeHtml(status)}</span>`;
+            });
+        }
+
         function closeStudentModal() {
             document.getElementById('studentModal').classList.add('hidden');
+            if (studentStatusChanged) {
+                refreshStudentTableStatus();
+                studentStatusChanged = false;
+            }
         }
 
         async function openStudent(studentId) {
@@ -4571,7 +4630,15 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             return '<span class="result-badge none">' + result + '</span>';
         }
 
-        const STATUS_OPTIONS = ['đang học', 'nghỉ ngang', 'nghỉ từ đầu', 'chuyển xứ', 'nợ bài'];
+        const STATUS_OPTIONS = [
+            "\u0111ang h\u1ecdc",
+            "ngh\u1ec9 ngang",
+            "ngh\u1ec9 t\u1eeb \u0111\u1ea7u",
+            "chuy\u1ec3n x\u1ee9",
+            "n\u1ee3 b\u00e0i",
+            "thi\u1ebfu \u0111i\u1ec3m l\u1ec5",
+            "thi\u1ebfu \u0111i\u1ec3m gi\u00e1o l\u00fd"
+        ];
 
         function getStatusKey(status) {
             return normalizeText(status).replace(/\s+/g, '-');
@@ -4606,12 +4673,11 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
 
                 select.dataset.currentStatus = data.status;
                 select.closest('.status-editor').dataset.status = getStatusKey(data.status);
-                const student = allStudents.find(item => item.studentId === studentId);
+                const student = allStudents.find(item => String(item.studentId) === String(studentId));
                 if (student) student.status = data.status;
-                const tableWrapper = document.querySelector('.table-wrapper');
-                const scrollTop = tableWrapper ? tableWrapper.scrollTop : 0;
-                filterStudents();
-                if (tableWrapper) tableWrapper.scrollTop = scrollTop;
+                updateVisibleStudentStatus(studentId, data.status);
+                studentStatusChanged = true;
+                refreshStudentTableStatus();
                 showToast('Đã cập nhật tình trạng', 'success');
             } catch (err) {
                 select.value = previousStatus;
@@ -4623,9 +4689,21 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
 
         function renderStudent(data) {
             const result = document.getElementById('modalResult');
-            const attendance = data.attendance || [];
+            const attendance = [...(data.attendance || [])].sort((a, b) => {
+                const toTime = value => {
+                    const [day, month, year] = String(value || '').split('/').map(Number);
+                    return new Date(year || 0, (month || 1) - 1, day || 1).getTime();
+                };
+                return toTime(b.date) - toTime(a.date);
+            });
             const total = attendance.length;
             const avatarUrl = data.avatar || 'Ava.png';
+            const familyInfo = [
+                data.dateOfBirth ? `<div class="family-info-item"><strong><span class="material-icons-round">cake</span>Ngày sinh</strong>${escapeHtml(data.dateOfBirth)}</div>` : '',
+                data.fatherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Cha</strong>${escapeHtml(data.fatherName)}</div>` : '',
+                data.motherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Mẹ</strong>${escapeHtml(data.motherName)}</div>` : '',
+                data.phones?.length ? `<div class="family-info-item family-phones"><strong><span class="material-icons-round">phone</span>Số điện thoại · chạm để sao chép</strong>${data.phones.map(phone => `<button type="button" class="copy-phone" onclick="copyPhone('${escapeHtml(phone)}')">${escapeHtml(formatPhone(phone))}</button>`).join('')}</div>` : ''
+            ].filter(Boolean).join('');
 
             const rows = attendance.map((item) => {
                 return `
@@ -4678,6 +4756,7 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
                         </div>
                     </div>
                     ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
+                    ${familyInfo ? `<div class="family-info">${familyInfo}</div>` : ''}
                 </div>
             </div>
 
@@ -5730,9 +5809,65 @@ button.btn-monthly-report { background:linear-gradient(135deg,#7c3aed,#5b21b6); 
             })[char]);
         }
 
+        async function copyPhone(phone) {
+            try {
+                await navigator.clipboard.writeText(phone);
+                showToast(`Đã sao chép ${phone}`, 'success');
+            } catch (err) {
+                showToast('Không thể sao chép số điện thoại');
+            }
+        }
+
+        function formatPhone(phone) {
+            const digits = String(phone || '').replace(/\D/g, '');
+            return digits.length === 10 ? `${digits.slice(0, 4)}.${digits.slice(4, 7)}.${digits.slice(7)}` : phone;
+        }
+
         async function openLeaveModal() {
             document.getElementById('leaveModal').classList.remove('hidden');
             await loadLeaveRequests();
+        }
+
+        async function openAttentionModal() {
+            const modal = document.getElementById('attentionModal');
+            const container = document.getElementById('attentionStudentsList');
+            modal.classList.remove('hidden');
+            container.innerHTML = '<div class="leave-empty">Đang kiểm tra dữ liệu điểm danh...</div>';
+            try {
+                const res = await fetch(api('/attention-students'));
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Không thể tải danh sách');
+                if (data.summerBreak) {
+                    container.innerHTML = '<div class="leave-empty"><span class="material-icons-round" style="display:block;margin-bottom:9px;font-size:30px;color:#d97706;">beach_access</span><strong>Đã Tổng Kết Nghỉ Hè</strong><br><span style="font-size:12px;">Danh sách cảnh báo sẽ được tính lại khi năm học mới bắt đầu.</span></div>';
+                    return;
+                }
+                if (!data.students.length) {
+                    container.innerHTML = '<div class="leave-empty">Chưa có học viên nào cần quan tâm theo tiêu chí hiện tại.</div>';
+                    return;
+                }
+                const classGroups = data.classes || [{ className: 'Học viên', students: data.students }];
+                container.innerHTML = classGroups.map(classGroup => `
+                    <div class="attention-class-title">${escapeHtml(classGroup.className)} <span>${classGroup.students.length} em</span></div>
+                    ${classGroup.students.map(student => `
+                        <div class="attention-item" onclick="openAttentionStudent('${escapeHtml(student.studentId)}')">
+                            <div class="attention-name">${escapeHtml(student.name)}</div>
+                            <div class="attention-meta">${escapeHtml(student.studentId)}</div>
+                            <div class="attention-reasons">${student.reasons.map(reason => `<span class="attention-reason ${escapeHtml(reason.type)}">${escapeHtml(reason.label)}</span>`).join('')}</div>
+                        </div>
+                    `).join('')}
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="leave-empty">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function closeAttentionModal() {
+            document.getElementById('attentionModal').classList.add('hidden');
+        }
+
+        function openAttentionStudent(studentId) {
+            closeAttentionModal();
+            openStudent(studentId);
         }
 
         function closeLeaveModal() {
