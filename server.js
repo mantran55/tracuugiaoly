@@ -101,6 +101,27 @@ function findAttendanceDateColumn(headers, dateStr) {
   });
 }
 
+function parseAttendanceDateInRange(value, startDate, endDate) {
+  if (!value) return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const parsed = parseAttendanceHeaderDate(value, startDate.getFullYear());
+    return parsed ? new Date(parsed.year, parsed.month - 1, parsed.day) : null;
+  }
+  const match = String(value).trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  if (match[3]) {
+    const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+    return new Date(year, month - 1, day);
+  }
+  for (let year = startDate.getFullYear(); year <= endDate.getFullYear(); year++) {
+    const candidate = new Date(year, month - 1, day);
+    if (candidate >= startDate && candidate <= endDate) return candidate;
+  }
+  return null;
+}
+
 function countWeekdaysInMonth(year, month, weekdays) {
   const lastDay = new Date(year, month, 0).getDate();
   let total = 0;
@@ -856,11 +877,19 @@ app.get("/attention-students", async (req, res) => {
     const state = getState(group);
     const today = new Date();
     const headers = state.cacheData?.[2] || [];
+    const firstRow = state.cacheData?.[0] || [];
+    const configuredStart = parseAttendanceHeaderDate(firstRow[10], today.getFullYear()); // K1
+    const configuredEnd = parseAttendanceHeaderDate(firstRow[12], today.getFullYear()); // M1
+    const startDate = configuredStart
+      ? new Date(configuredStart.year, configuredStart.month - 1, configuredStart.day)
+      : new Date(today.getFullYear(), 0, 1);
+    const configuredEndDate = configuredEnd
+      ? new Date(configuredEnd.year, configuredEnd.month - 1, configuredEnd.day)
+      : today;
+    const endDate = configuredEndDate < today ? configuredEndDate : today;
     const attendanceDates = headers.map((header, index) => {
-      const date = parseAttendanceHeaderDate(header, today.getFullYear());
-      if (!date) return null;
-      const value = new Date(date.year, date.month - 1, date.day);
-      return value <= today ? { index, weekday: value.getDay(), value } : null;
+      const value = parseAttendanceDateInRange(header, startDate, endDate);
+      return value && value >= startDate && value <= endDate ? { index, weekday: value.getDay(), value } : null;
     }).filter(Boolean).sort((a, b) => a.value - b.value);
 
     const catechismDates = attendanceDates.filter(item => item.weekday === 0).slice(-3);
@@ -892,13 +921,24 @@ app.get("/attention-students", async (req, res) => {
         status,
         reasons
       } : null;
-    }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    }).filter(Boolean);
+
+    const classes = [];
+    students.forEach(student => {
+      let classGroup = classes.find(item => item.className === student.className);
+      if (!classGroup) {
+        classGroup = { className: student.className || "Chưa xếp lớp", students: [] };
+        classes.push(classGroup);
+      }
+      classGroup.students.push(student);
+    });
 
     return res.json({
       success: true,
       total: students.length,
       students,
-      criteria: { catechismDays: catechismDates.length, massDays: massDates.length }
+      classes,
+      criteria: { catechismDays: catechismDates.length, massDays: massDates.length, startDate, endDate }
     });
   } catch (err) {
     console.error("Lỗi danh sách cần quan tâm:", err);
