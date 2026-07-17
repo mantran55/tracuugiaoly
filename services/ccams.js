@@ -110,11 +110,13 @@ async function getCCAMSStudentProfile(studentId) {
       const cells = $(row).find('td');
       if (String($(cells[1]).text() || '').trim() !== id) return;
       const phoneText = String($(cells[8]).text() || '').trim();
+      const phones = (phoneText.replace(/\D/g, '').match(/0\d{9}/g) || [])
+        .filter((phone, index, all) => all.indexOf(phone) === index);
       profile = {
         dateOfBirth: String($(cells[3]).text() || '').trim(),
         fatherName: String($(cells[9]).text() || '').trim(),
         motherName: String($(cells[10]).text() || '').trim(),
-        phones: phoneText.split(/[\n,;]+/).map(phone => phone.trim()).filter(Boolean)
+        phones
       };
     });
     studentProfileCache[id] = { timestamp: now, data: profile };
