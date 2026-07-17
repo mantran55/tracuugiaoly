@@ -711,6 +711,10 @@
             padding-top: 16px;
             border-top: 1px solid var(--border-soft);
         }
+
+        .server-progress-track { width:min(320px,100%); height:8px; margin:18px auto 0; overflow:hidden; border-radius:999px; background:#dbeafe; }
+        .server-progress-bar { width:12%; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--blue),var(--blue-soft)); transition:width .45s ease; }
+        .server-progress-note { margin-top:10px; color:var(--text-muted); font-size:12px; font-weight:600; }
         .student-leave-box {
             margin-top: 14px;
             padding: 11px 12px;
@@ -722,6 +726,13 @@
             line-height: 1.55;
         }
         .student-leave-box strong { display:block; margin-bottom:4px; color:#78350f; }
+        .family-info { display:grid; grid-template-columns:110px repeat(2,minmax(0,1fr)); gap:7px; margin-top:14px; }
+        .family-info-item { padding:9px 10px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; color:var(--text-secondary); font-size:11px; line-height:1.45; min-width:0; }
+        .family-info-item strong { display:flex; align-items:center; gap:4px; margin-bottom:2px; color:#64748b; font-size:9px; text-transform:uppercase; letter-spacing:.03em; }
+        .family-info-item strong .material-icons-round { font-size:13px; color:var(--blue); }
+        .family-info-item.family-phones { grid-column:1 / -1; background:#f0f7ff; }
+        .copy-phone { margin:3px 5px 0 0; padding:5px 8px; border:1px solid #bfdbfe; border-radius:7px; background:white; color:#1d4ed8; font:inherit; font-size:11px; font-weight:800; cursor:pointer; }
+        .copy-phone:hover { background:#dbeafe; }
 
         .meta-item {
             display: flex;
@@ -1182,6 +1193,10 @@
             .profile-name { font-size: 20px; }
             .profile-role { justify-content: center; }
             .profile-meta { justify-content: center; flex-wrap: wrap; gap: 16px; }
+            .family-info { grid-template-columns: 1fr; gap: 8px; }
+            .family-info-item { padding: 10px 12px; font-size: 12px; }
+            .family-info-item.family-phones { padding: 11px 12px; }
+            .copy-phone { min-height: 36px; margin: 5px 6px 0 0; padding: 6px 10px; font-size: 12px; }
 
             .stat-number { font-size: 28px; }
 
@@ -1327,7 +1342,57 @@
             })[char]);
         }
 
+        async function copyPhone(phone) {
+            try {
+                await navigator.clipboard.writeText(phone);
+                showToast(`Đã sao chép ${phone}`);
+            } catch (err) {
+                showToast('Không thể sao chép số điện thoại');
+            }
+        }
+
+        function formatPhone(phone) {
+            const digits = String(phone || '').replace(/\D/g, '');
+            return digits.length === 10 ? `${digits.slice(0, 4)}.${digits.slice(4, 7)}.${digits.slice(7)}` : phone;
+        }
+
         const API_URL = 'https://tracuugiaoly.onrender.com';
+
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function openDashboardWhenReady(group) {
+            const result = document.getElementById('result');
+            result.innerHTML = `
+                <div class="state-box">
+                    <div class="state-illustration"><span class="material-icons-round">cloud_sync</span></div>
+                    <div class="state-text" id="serverLoadingText">Đang tải dữ liệu lớp, xin vui lòng đợi...</div>
+                    <div class="server-progress-track"><div id="serverProgressBar" class="server-progress-bar"></div></div>
+                    <div id="serverProgressNote" class="server-progress-note">Đang kết nối máy chủ Render...</div>
+                </div>`;
+
+            for (let attempt = 1; attempt <= 25; attempt++) {
+                const percent = Math.min(92, 12 + attempt * 3);
+                document.getElementById('serverProgressBar').style.width = `${percent}%`;
+                document.getElementById('serverProgressNote').textContent =
+                    attempt === 1 ? 'Đang đánh thức máy chủ Render...' : `Máy chủ đang khởi động, lần kiểm tra ${attempt}/25...`;
+                try {
+                    const response = await fetch(`${API_URL}/`, { cache: 'no-store' });
+                    if (response.ok) {
+                        document.getElementById('serverProgressBar').style.width = '100%';
+                        document.getElementById('serverLoadingText').textContent = 'Máy chủ đã sẵn sàng, đang mở trang lớp...';
+                        await delay(250);
+                        window.location.href = `glv-dashboard.html?group=${encodeURIComponent(group)}`;
+                        return;
+                    }
+                } catch (err) {
+                    // Render đang ở trạng thái ngủ/khởi động: tiếp tục thử lại.
+                }
+                await delay(3000);
+            }
+
+            document.getElementById('serverLoadingText').textContent = 'Máy chủ đang mất nhiều thời gian để khởi động.';
+            document.getElementById('serverProgressNote').textContent = 'Vui lòng thử lại sau ít phút.';
+        }
 
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1344,7 +1409,7 @@
             };
 
             if (dashboardGroups[studentId]) {
-                window.location.href = `glv-dashboard.html?group=${dashboardGroups[studentId]}`;
+                await openDashboardWhenReady(dashboardGroups[studentId]);
                 return;
             }
 
@@ -1388,9 +1453,21 @@
 
         function renderStudent(data) {
             const result = document.getElementById('result');
-            const attendance = data.attendance || [];
+            const attendance = [...(data.attendance || [])].sort((a, b) => {
+                const toTime = value => {
+                    const [day, month, year] = String(value || '').split('/').map(Number);
+                    return new Date(year || 0, (month || 1) - 1, day || 1).getTime();
+                };
+                return toTime(b.date) - toTime(a.date);
+            });
             const total = attendance.length;
             const avatarUrl =  data.avatar || 'Ava.png';
+            const familyInfo = [
+                data.dateOfBirth ? `<div class="family-info-item"><strong><span class="material-icons-round">cake</span>Ngày sinh</strong>${escapeHtml(data.dateOfBirth)}</div>` : '',
+                data.fatherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Cha</strong>${escapeHtml(data.fatherName)}</div>` : '',
+                data.motherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Mẹ</strong>${escapeHtml(data.motherName)}</div>` : '',
+                data.phones?.length ? `<div class="family-info-item family-phones"><strong><span class="material-icons-round">phone</span>Số điện thoại · chạm để sao chép</strong>${data.phones.map(phone => `<button type="button" class="copy-phone" onclick="copyPhone('${escapeHtml(phone)}')">${escapeHtml(formatPhone(phone))}</button>`).join('')}</div>` : ''
+            ].filter(Boolean).join('');
 
             const rows = attendance.map((item) => {
 
@@ -1468,6 +1545,7 @@
                         </div>
                     </div>
                     ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
+                    ${familyInfo ? `<div class="family-info">${familyInfo}</div>` : ''}
                 </div>
             </div>
 
