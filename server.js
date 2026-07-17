@@ -903,8 +903,8 @@ app.get("/attention-students", async (req, res) => {
       return value && value >= startDate && value <= endDate ? { index, weekday: value.getDay(), value } : null;
     }).filter(Boolean).sort((a, b) => a.value - b.value);
 
-    const catechismDates = attendanceDates.filter(item => item.weekday === 0).slice(-3);
-    const massDates = attendanceDates.filter(item => item.weekday === 0 || item.weekday === 4).slice(-3);
+    const catechismDates = attendanceDates.filter(item => item.weekday === 0).slice(-5);
+    const massDates = attendanceDates.filter(item => item.weekday === 0 || item.weekday === 4).slice(-5);
     const attentionStatuses = new Set([
       "ngh\u1ec9 ngang", "n\u1ee3 b\u00e0i", "thi\u1ebfu \u0111i\u1ec3m l\u1ec5", "thi\u1ebfu \u0111i\u1ec3m gi\u00e1o l\u00fd"
     ]);
@@ -914,12 +914,23 @@ app.get("/attention-students", async (req, res) => {
       const status = String(state.statusMap[studentId] || "").trim();
       const reasons = [];
       const isAbsent = (dateItem, symbol) => !String(row[dateItem.index] || "").toUpperCase().includes(symbol);
+      const formatDate = item => `${String(item.value.getDate()).padStart(2, "0")}/${String(item.value.getMonth() + 1).padStart(2, "0")}`;
+      const absenceStreak = (dates, symbol) => {
+        const streak = [];
+        for (let index = dates.length - 1; index >= 0; index--) {
+          if (!isAbsent(dates[index], symbol)) break;
+          streak.unshift(dates[index]);
+        }
+        return streak;
+      };
+      const catechismStreak = absenceStreak(catechismDates, "G");
+      const massStreak = absenceStreak(massDates, "C");
 
-      if (catechismDates.length === 3 && catechismDates.every(item => isAbsent(item, "G"))) {
-        reasons.push({ type: "catechism", label: "Vắng Giáo Lý 3 CN liên tiếp" });
+      if (catechismStreak.length >= 3) {
+        reasons.push({ type: "catechism", label: `Vắng Giáo Lý ${catechismStreak.length} CN liên tiếp: ${catechismStreak.map(formatDate).join(", ")}` });
       }
-      if (massDates.length === 3 && massDates.every(item => isAbsent(item, "C"))) {
-        reasons.push({ type: "mass", label: "Vắng Thánh Lễ 3 buổi liên tiếp" });
+      if (massStreak.length >= 3) {
+        reasons.push({ type: "mass", label: `Vắng Thánh Lễ ${massStreak.length} buổi liên tiếp: ${massStreak.map(formatDate).join(", ")}` });
       }
       if (attentionStatuses.has(status.toLowerCase())) {
         reasons.push({ type: "status", label: status });
@@ -943,6 +954,11 @@ app.get("/attention-students", async (req, res) => {
       }
       classGroup.students.push(student);
     });
+    classes.forEach(classGroup => classGroup.students.sort((a, b) => {
+      const lastName = name => String(name || "").trim().split(/\s+/).pop() || "";
+      return lastName(a.name).localeCompare(lastName(b.name), "vi", { sensitivity: "base" }) ||
+        String(a.name || "").localeCompare(String(b.name || ""), "vi", { sensitivity: "base" });
+    }));
 
     return res.json({
       success: true,
