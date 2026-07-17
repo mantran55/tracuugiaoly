@@ -1357,6 +1357,12 @@
         }
 
         const API_URL = 'https://tracuugiaoly.onrender.com';
+        const LAST_DASHBOARD_CODE_KEY = 'giaoly_last_dashboard_code';
+
+        const savedDashboardCode = localStorage.getItem(LAST_DASHBOARD_CODE_KEY);
+        if (savedDashboardCode) {
+            document.getElementById('studentId').value = savedDashboardCode;
+        }
 
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1409,6 +1415,7 @@
             };
 
             if (dashboardGroups[studentId]) {
+                localStorage.setItem(LAST_DASHBOARD_CODE_KEY, studentId);
                 await openDashboardWhenReady(dashboardGroups[studentId]);
                 return;
             }
