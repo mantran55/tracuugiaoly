@@ -1,9 +1,8 @@
 const ATTENDANCE_SHEET = "Thánh Lễ";
 const SCORE_SHEET = "Điểm";
 const STATUS_SHEET = "Tình Trạng";
-const express = require("express");
-const cors = require("cors");
-const { google } = require("googleapis");
+const express = require("./worker-express");
+const { createSheetsClient } = require("./services/google-sheets");
 const {
   getCCAMS,
   getCCAMSStudentProfile,
@@ -11,11 +10,8 @@ const {
   getCCAMSClasses
 } = require("./services/ccams");
 
-const axios = require("axios");
-const cheerio = require("cheerio");
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -140,14 +136,7 @@ async function loadSheetData(group) {
   const credentials =
   JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: [
-    "https://www.googleapis.com/auth/spreadsheets"
-  ]
-});
-
-  const sheets = google.sheets({ version: "v4", auth });
+  const sheets = createSheetsClient(credentials);
 
   const [
     attendanceResponse,
@@ -1437,24 +1426,14 @@ async function getSheetsClient() {
   const credentials =
     JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets"
-    ]
-  });
-
-  return google.sheets({
-    version: "v4",
-    auth
-  });
+  return createSheetsClient(credentials);
 }
 
 
 // =========================
 // Start Server
 // =========================
-app.listen(PORT, async () => {
+if (!globalThis.__CLOUDFLARE_WORKER__) app.listen(PORT, async () => {
   try {
     await Promise.all(Object.keys(SHEET_GROUPS).map(loadSheetData));
     
@@ -1466,3 +1445,5 @@ app.listen(PORT, async () => {
 
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
+
+module.exports = app;
