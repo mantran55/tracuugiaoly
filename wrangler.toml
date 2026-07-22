@@ -1,4 +1,4 @@
-name = "giaoly-tracuu-api"
+name = "tracuugiaoly"
 main = "worker.mjs"
 compatibility_date = "2026-07-22"
 compatibility_flags = ["nodejs_compat"]
