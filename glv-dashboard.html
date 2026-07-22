@@ -1943,6 +1943,16 @@
             gap: 5px;
         }
 
+        .att-student-status {
+            display: inline-block;
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            
+            color: var(--blue-deep);
+            font-weight: 700;
+        }
+
         .att-class-chip {
             background: var(--blue-ghost);
             color: var(--blue);
@@ -3515,6 +3525,11 @@ button.btn-report {
     background: linear-gradient(135deg, #d97706, #b45309);
 }
 
+.mobile-actions-toggle,
+.mobile-actions-menu {
+    display: none;
+}
+
 @media (max-width: 600px) {
     .table-toolbar {
         display: grid;
@@ -3537,14 +3552,34 @@ button.btn-report {
     }
 
     .toolbar-actions {
+        display: none;
+    }
+
+    .mobile-actions-toggle {
+        display: inline-flex;
         grid-column: 1 / -1;
-        display: grid;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--blue-deep);
+        color: white;
+        font-weight: 800;
+    }
+
+    .mobile-actions-menu {
+        grid-column: 1 / -1;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         margin: 2px 0 0;
     }
 
-    .toolbar-actions button {
+    .mobile-actions-menu.open { display: grid; }
+
+    .mobile-actions-menu button {
         width: 100%;
         min-width: 0;
         min-height: 62px;
@@ -3559,15 +3594,33 @@ button.btn-report {
         text-align: center;
     }
 
-    .toolbar-actions button .material-icons-round {
+    .mobile-actions-menu button .material-icons-round {
         font-size: 20px;
     }
 }
 
 @media (max-width: 360px) {
-    .toolbar-actions button {
+    .mobile-actions-menu button {
         min-height: 58px;
         font-size: 9px;
+    }
+}
+
+/* Keep the compact menu limited to touch-first mobile devices. */
+@media (hover: hover) and (pointer: fine) {
+    .mobile-actions-toggle,
+    .mobile-actions-menu,
+    .mobile-actions-menu.open {
+        display: none !important;
+    }
+
+    @media (max-width: 600px) {
+        .toolbar-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            margin: 2px 0 0;
+        }
     }
 }
 
@@ -3979,6 +4032,19 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
                         <span class="material-icons-round">priority_high</span>
                         <span>Cần quan tâm</span>
                     </button>
+                </div>
+
+                <button class="mobile-actions-toggle" type="button" onclick="toggleMobileActions()" aria-controls="mobileActionsMenu" aria-expanded="false">
+                    <span class="material-icons-round">menu</span>
+                    Chức năng
+                </button>
+                <div id="mobileActionsMenu" class="mobile-actions-menu">
+                    <button class="btn-export" onclick="closeMobileActions(); exportExcel()"><span class="material-icons-round">download</span><span>Xuất Excel</span></button>
+                    <button class="btn-report" onclick="closeMobileActions(); openReportModal()"><span class="material-icons-round">assignment</span><span>Báo cáo</span></button>
+                    <button class="btn-monthly-report" onclick="closeMobileActions(); openMonthlyReportModal()"><span class="material-icons-round">calendar_month</span><span>Báo cáo tháng</span></button>
+                    <button class="btn btn-primary" onclick="closeMobileActions(); openAttendanceModal()"><span class="material-icons-round">fact_check</span><span>Lấy điểm danh</span></button>
+                    <button class="btn-leave" onclick="closeMobileActions(); openLeaveModal()"><span class="material-icons-round">event_note</span><span>Đơn phép</span></button>
+                    <button class="btn-attention" onclick="closeMobileActions(); openAttentionModal()"><span class="material-icons-round">priority_high</span><span>Cần quan tâm</span></button>
                 </div>
 
             </div>
@@ -5399,6 +5465,20 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
             document.getElementById("attendanceListModal").classList.add("hidden");
         }
 
+        function toggleMobileActions() {
+            const menu = document.getElementById('mobileActionsMenu');
+            const button = document.querySelector('.mobile-actions-toggle');
+            const isOpen = menu.classList.toggle('open');
+            button.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        function closeMobileActions() {
+            const menu = document.getElementById('mobileActionsMenu');
+            const button = document.querySelector('.mobile-actions-toggle');
+            menu.classList.remove('open');
+            button.setAttribute('aria-expanded', 'false');
+        }
+
         function showAttendanceModal(type) {
             const isPresent = type === 'present';
             const students = isPresent ? todayAttendance.present : todayAttendance.absent;
@@ -5427,11 +5507,13 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
         let currentClass = '';
         let bodyHtml = '';
 
-        sortedStudents.forEach((s, index) => {
+        let classIndex = 0;
+        sortedStudents.forEach((s) => {
 
             if (currentClass !== s.className) {
 
                 currentClass = s.className;
+                classIndex = 0;
 
                 bodyHtml += `
                     <div style="
@@ -5447,14 +5529,16 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
                 `;
             }
 
+            classIndex++;
             bodyHtml += `
                 <div class="att-row ${rowClass}">
-                    <span class="att-index">${index + 1}</span>
+                    <span class="att-index">${classIndex}</span>
                     <span class="att-avatar">${getInitials(s.name)}</span>
 
                     <div class="att-info">
                         <div class="att-name">${s.name}</div>
                         <div class="att-meta">
+                            <span class="att-student-status" title="${escapeHtml(s.status || 'Chưa cập nhật')}">${escapeHtml(s.status || 'Chưa cập nhật')}</span>
                             <span>Mã ${s.studentId}</span>
                         </div>
                     </div>
