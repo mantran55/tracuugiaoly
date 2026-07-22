@@ -12,7 +12,7 @@ export default {
       return new Response(null, { status: 204, headers: {
         "access-control-allow-origin": "*",
         "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        "access-control-allow-headers": "Content-Type, X-Automation-Secret"
+        "access-control-allow-headers": "Content-Type, X-Automation-Secret, X-Automation-Key"
       }});
     }
     Object.assign(process.env, env);

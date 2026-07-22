@@ -46,7 +46,13 @@ function createApp() {
       end() { response = new Response(streamed.join(""), { status: this.statusCode || 200, headers: corsHeaders(responseHeaders) }); }
     };
     try {
-      await match.handler({ query: Object.fromEntries(url.searchParams), params, body, headers: request.headers }, res);
+      await match.handler({
+        query: Object.fromEntries(url.searchParams),
+        params,
+        body,
+        headers: request.headers,
+        get(name) { return request.headers.get(name); }
+      }, res);
       return response || json({ success: false, error: "Route did not return a response" }, 500);
     } catch (error) {
       console.error(error);
@@ -60,7 +66,7 @@ function corsHeaders(headers = {}) {
   return new Headers({
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "access-control-allow-headers": "Content-Type, X-Automation-Secret",
+    "access-control-allow-headers": "Content-Type, X-Automation-Secret, X-Automation-Key",
     ...headers
   });
 }
