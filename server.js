@@ -1281,6 +1281,10 @@ function formatLeaveDateVN(dateStr) {
 
 async function importAttendance(date, classId, group) {
 
+  // Workers may start a fresh isolate for any request. Always load the
+  // student map before matching CCAMS attendance instead of relying on a
+  // warm in-memory cache left by a previous manual import.
+  await getSheetData(group);
   const sheets = await getSheetsClient();
   const spreadsheetId = SHEET_GROUPS[group];
   const state = getState(group);
