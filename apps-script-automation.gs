@@ -5,7 +5,7 @@
  * 3) Chạy installAttendanceTriggers() một lần để cấp quyền và tạo lịch chạy.
  */
 
-const API_URL = 'https://tracuugiaoly.onrender.com/scheduled-import';
+const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev/scheduled-import';
 
 // classId là mã lớp CCAMS mà dashboard đang dùng khi lấy điểm danh thủ công.
 const SCHEDULES = [
