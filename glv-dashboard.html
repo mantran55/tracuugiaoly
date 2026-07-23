@@ -1605,6 +1605,12 @@
             padding: 18px 22px;
         }
 
+        .student-card-modal .student-header {
+            background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
+            color: white;
+            padding: 18px 22px;
+        }
+
         .monthly-report-modal .student-header {
             background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
             color: white;
@@ -3530,6 +3536,29 @@ button.btn-report {
     display: none;
 }
 
+/* === THẺ HỌC VIÊN === */
+.student-card-modal { z-index:10000; }
+.student-card-modal .modal-content { width:min(980px,96vw); max-height:94vh; overflow:auto; }
+.student-card-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:18px 22px; background:#f8fafc; }
+.student-card-controls label { display:grid; gap:6px; color:#334155; font-size:12px; font-weight:800; }
+.student-card-controls input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:9px; font:inherit; }
+.student-card-actions { display:flex; justify-content:flex-end; gap:10px; padding:0 22px 18px; background:#f8fafc; }
+.student-card-actions button, .create-card-button { border:0; border-radius:10px; padding:10px 14px; background:#166534; color:#fff; cursor:pointer; }
+.create-card-button { display:inline-flex; align-items:center; gap:6px; margin-left:8px; padding:7px 10px; font-size:11px; }
+.student-card-preview-wrap { padding:22px; background:#e2e8f0; overflow:auto; display:flex; justify-content:center; }
+.student-card-preview { position:relative; width:min(920px,50%); aspect-ratio:92/61; container-type:inline-size; background:url('thedeo.png') center/100% 100% no-repeat; color:#064e1b; font-family:'Be Vietnam Pro',sans-serif; }
+.student-card-preview.is-exporting { width:920px; max-width:none; }
+.student-card-text { position:absolute; text-align:center; font-weight:700; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:none; }
+.student-card-label { font-weight:500; text-transform:none; }
+.student-card-name { left:8%; top:36.1%; width:84%; color:#e00000; font-size:4.7cqw; font-weight:800; }
+.student-card-class { left:8%; top:47.4%; width:84%; font-size:3.4cqw; }
+.student-card-phone { left:17%; top:61%; width:49%; font-size:3.25cqw; text-align:right; }
+.student-card-glv-name { left:12%; top:76.7%; width:54%; font-size:3.15cqw; text-align:right; }
+.student-card-glv-phone { left:30%; top:84.5%; width:36%; font-size:2.9cqw; text-align:right; }
+.student-card-qr { position:absolute; left:73.2%; top:59.4%; width:20.2%; aspect-ratio:1; padding:.65%; background:#fff; display:flex; align-items:center; justify-content:center; }
+.student-card-qr canvas, .student-card-qr img { width:100% !important; height:100% !important; }
+@media (max-width: 700px) { .student-card-controls { grid-template-columns:1fr; padding:14px; } .student-card-actions { padding:0 14px 14px; } .student-card-preview-wrap { padding:12px; } }
+
 @media (max-width: 600px) {
     .table-toolbar {
         display: grid;
@@ -3840,6 +3869,7 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     .family-info-item { padding:10px 12px; font-size:12px; }
     .family-info-item.family-phones { padding:11px 12px; }
     .copy-phone { min-height:36px; margin:5px 6px 0 0; padding:6px 10px; font-size:12px; }
+    .student-card-preview { position:relative; width:min(920px,100%); aspect-ratio:92/61; container-type:inline-size; background:url('thedeo.png') center/100% 100% no-repeat; color:#064e1b; font-family:'Be Vietnam Pro',sans-serif; }
 }
 
     </style>
@@ -4142,6 +4172,29 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     </div>
 
     <!-- ================= MODAL: CHI TIẾT HỌC SINH ================= -->
+    <div id="studentCardModal" class="modal-overlay hidden student-card-modal" onclick="if(event.target===this) closeStudentCardModal()">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeStudentCardModal()">✕</button>
+            <div class="student-header"><h2>Tạo thẻ học viên</h2></div>
+            <div class="student-card-controls">
+                <label>Tên GLV <input id="cardTeacherName" type="text" placeholder="Nhập tên giáo lý viên" oninput="updateStudentCard()"></label>
+                <label>Số điện thoại GLV <input id="cardTeacherPhone" type="tel" placeholder="Nhập số điện thoại" oninput="updateStudentCard()"></label>
+            </div>
+            <div class="student-card-actions">
+                <button type="button" onclick="downloadStudentCard()"><span class="material-icons-round">download</span> Tải thẻ PNG</button>
+                <button type="button" onclick="downloadStudentCardPdf()"><span class="material-icons-round">picture_as_pdf</span> Tải PDF A5 (4 thẻ)</button>
+            </div>
+            <div class="student-card-preview-wrap"><div id="studentCardPreview" class="student-card-preview">
+                <div id="studentCardName" class="student-card-text student-card-name"></div>
+                <div id="studentCardClass" class="student-card-text student-card-class"></div>
+                <div id="studentCardPhone" class="student-card-text student-card-phone"></div>
+                <div id="studentCardTeacherName" class="student-card-text student-card-glv-name"></div>
+                <div id="studentCardTeacherPhone" class="student-card-text student-card-glv-phone"></div>
+                <div id="studentCardQr" class="student-card-qr"></div>
+            </div></div>
+        </div>
+    </div>
+
     <div id="studentModal" class="modal-overlay hidden" onclick="handleStudentModalBackdrop(event)">
         <div class="modal-content">
             <button class="modal-close" onclick="closeStudentModal()">✕</button>
@@ -4769,8 +4822,91 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
             }
         }
 
+        function openStudentCardModal() {
+            const student = window.currentStudentForCard;
+            if (!student) return;
+            document.getElementById('cardTeacherName').value = localStorage.getItem('cardTeacherName') || '';
+            document.getElementById('cardTeacherPhone').value = localStorage.getItem('cardTeacherPhone') || '';
+            document.getElementById('studentCardModal').classList.remove('hidden');
+            updateStudentCard();
+        }
+
+        function closeStudentCardModal() {
+            document.getElementById('studentCardModal').classList.add('hidden');
+        }
+
+        function updateStudentCard() {
+            const student = window.currentStudentForCard;
+            if (!student || typeof QRCode === 'undefined') return;
+            const teacherName = document.getElementById('cardTeacherName').value.trim();
+            const teacherPhone = document.getElementById('cardTeacherPhone').value.trim();
+            localStorage.setItem('cardTeacherName', teacherName);
+            localStorage.setItem('cardTeacherPhone', teacherPhone);
+
+            const id = String(student.studentId || student.id || '').trim();
+            const parentPhone = (student.phones || [])[0] || '';
+            document.getElementById('studentCardName').textContent = student.name || '—';
+            document.getElementById('studentCardClass').innerHTML = `<span class="student-card-label">Lớp:</span> ${escapeHtml(student.className || '—')} – <span class="student-card-label">Mã số:</span> ${escapeHtml(id || '—')}`;
+            document.getElementById('studentCardPhone').textContent = parentPhone ? `☎: ${formatPhone(parentPhone)}` : '☎: —';
+            document.getElementById('studentCardTeacherName').innerHTML = `<span class="student-card-label">Glv:</span> ${escapeHtml(teacherName || '—')}`;
+            document.getElementById('studentCardTeacherPhone').textContent = teacherPhone || '—';
+
+            const qr = document.getElementById('studentCardQr');
+            qr.replaceChildren();
+            new QRCode(qr, {
+                text: `https://ccams.thongtinxuanloc.com/GXBIENHOA/${encodeURIComponent(id)}`,
+                width: 290,
+                height: 290,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        async function renderStudentCardCanvas() {
+            const card = document.getElementById('studentCardPreview');
+            if (!card || typeof html2canvas === 'undefined') throw new Error('Không thể tạo ảnh thẻ');
+            card.classList.add('is-exporting');
+            try {
+                return await html2canvas(card, { scale: 1.1815, useCORS: true, backgroundColor: null, logging: false });
+            } finally {
+                card.classList.remove('is-exporting');
+            }
+        }
+
+        async function downloadStudentCard() {
+            const student = window.currentStudentForCard;
+            if (!student) return;
+            const canvas = await renderStudentCardCanvas();
+            const link = document.createElement('a');
+            link.download = `The_hoc_vien_${student.studentId || student.id}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function downloadStudentCardPdf() {
+            const student = window.currentStudentForCard;
+            if (!student || !window.jspdf?.jsPDF) {
+                showToast('Thư viện PDF chưa sẵn sàng', 'error');
+                return;
+            }
+            try {
+                const canvas = await renderStudentCardCanvas();
+                const image = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5', compress: true });
+                const positions = [[12, 13], [106, 13], [12, 74], [106, 74]];
+                positions.forEach(([x, y]) => pdf.addImage(image, 'PNG', x, y, 92, 61));
+                pdf.save(`The_hoc_vien_${student.studentId || student.id}_A5.pdf`);
+            } catch (error) {
+                console.error(error);
+                showToast('Không thể tạo PDF', 'error');
+            }
+        }
+
         function renderStudent(data) {
             const result = document.getElementById('modalResult');
+            window.currentStudentForCard = data;
             const attendance = [...(data.attendance || [])].sort((a, b) => {
                 const toTime = value => {
                     const [day, month, year] = String(value || '').split('/').map(Number);
@@ -4824,6 +4960,7 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
                                         ${getStatusOptions(data.status)}
                                     </select>
                                 </span>
+                                <button type="button" class="create-card-button" onclick="openStudentCardModal()"><span class="material-icons-round">badge</span>Tạo thẻ</button>
                             </div>
                         </div>
                     </div>
@@ -6255,6 +6392,8 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     >
 </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </body>
 
