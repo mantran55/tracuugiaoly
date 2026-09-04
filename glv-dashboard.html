@@ -705,25 +705,26 @@
         }
 
         .table-toolbar button {
-            border: none;
-            background: #2563eb;
-            color: white;
+            border: 1.5px solid var(--blue-pale);
+            background: var(--blue-ghost);
+            color: var(--blue-deep);
             padding: 10px 18px;
             border-radius: 12px;
             cursor: pointer;
-            
-           
             font-family: 'Be Vietnam Pro', sans-serif;
             font-size: 14px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 6px;
             flex-wrap: wrap;
-            transition: background 0.25s, transform 0.2s, opacity 0.2s;
+            transition: background 0.25s, border-color 0.25s, transform 0.2s, opacity 0.2s, filter 0.2s, box-shadow 0.2s;
         }
 
         .table-toolbar button:hover:not(:disabled) {
-            background: #1d4ed8;
+            background: var(--blue-pale);
+            border-color: var(--blue-soft);
+            filter: brightness(1.03);
             transform: translateY(-1px);
         }
 
@@ -735,6 +736,37 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+
+        /* Các nút hành động màu (btn-export, btn-report, btn-primary...) tự
+           quản lý màu nền + hiệu ứng hover riêng, không dùng viền/nền của
+           .table-toolbar button ở trên. */
+        .table-toolbar button.btn-export,
+        .table-toolbar button.btn-report,
+        .table-toolbar button.btn-primary,
+        .table-toolbar button.btn-leave,
+        .table-toolbar button.btn-monthly-report,
+        .table-toolbar button.btn-attention {
+            border: none;
+            color: #fff;
+        }
+
+        .table-toolbar button.btn-export:hover:not(:disabled),
+        .table-toolbar button.btn-report:hover:not(:disabled),
+        .table-toolbar button.btn-primary:hover:not(:disabled),
+        .table-toolbar button.btn-leave:hover:not(:disabled),
+        .table-toolbar button.btn-monthly-report:hover:not(:disabled),
+        .table-toolbar button.btn-attention:hover:not(:disabled) {
+            border-color: transparent;
+            filter: brightness(1.07);
+            transform: translateY(-2px);
+        }
+
+        .table-toolbar button.btn-export:hover:not(:disabled) { background: linear-gradient(135deg,#059669,#047857); }
+        .table-toolbar button.btn-report:hover:not(:disabled) { background: linear-gradient(135deg,#dc2626,#b91c1c); }
+        .table-toolbar button.btn-primary:hover:not(:disabled) { background: linear-gradient(135deg,#2563eb,#1d4ed8); }
+        .table-toolbar button.btn-leave:hover:not(:disabled) { background: linear-gradient(135deg,#d97706,#b45309); }
+        .table-toolbar button.btn-monthly-report:hover:not(:disabled) { background: linear-gradient(135deg,#7c3aed,#5b21b6); }
+        .table-toolbar button.btn-attention:hover:not(:disabled) { background: linear-gradient(135deg,#dc2626,#991b1b); }
 
         /* === TABLE === */
         .table-card {
@@ -1600,21 +1632,59 @@
         }
 
         .attendance-modal .student-header {
-            background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
+            background:
+                radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+                linear-gradient(135deg, var(--blue-deep) 0%, var(--blue) 55%, var(--blue-mid) 100%);
+            background-size: 14px 14px, auto;
             color: white;
             padding: 18px 22px;
         }
 
         .student-card-modal .student-header {
-            background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
+            background:
+                radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+                linear-gradient(135deg, var(--blue-deep) 0%, var(--blue) 55%, var(--blue-mid) 100%);
+            background-size: 14px 14px, auto;
             color: white;
             padding: 18px 22px;
         }
 
         .monthly-report-modal .student-header {
-            background: radial-gradient(rgb(9 14 100) 1px, #072aa4 1px);
+            background:
+                radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+                linear-gradient(135deg, var(--blue-deep) 0%, var(--blue) 55%, var(--blue-mid) 100%);
+            background-size: 14px 14px, auto;
             color: white;
             padding: 18px 22px;
+        }
+
+        .attendance-modal .student-header h2::before {
+            content: 'fact_check';
+            font-family: 'Material Icons Round';
+            font-size: 20px;
+            color: rgba(255,255,255,.8);
+        }
+
+        .student-card-modal .student-header h2::before {
+            content: 'badge';
+            font-family: 'Material Icons Round';
+            font-size: 20px;
+            color: rgba(255,255,255,.8);
+        }
+
+        .monthly-report-modal .student-header h2::before {
+            content: 'calendar_month';
+            font-family: 'Material Icons Round';
+            font-size: 20px;
+            color: rgba(255,255,255,.8);
+        }
+
+        .attendance-modal .student-header h2,
+        .student-card-modal .student-header h2,
+        .monthly-report-modal .student-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 9px;
         }
 
         .attendance-modal .student-header h2 {
@@ -1659,16 +1729,19 @@
             height: 48px;
             border: none;
             border-radius: 10px;
-            background: #2563eb;
+            background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+            box-shadow: 0 4px 14px rgba(29, 78, 216, 0.24);
             color: white;
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
-            transition: .2s;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
         }
 
         .attendance-body button:hover {
-            background: #1d4ed8;
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(29, 78, 216, 0.3);
         }
 
         .attendance-last-updated {
@@ -3304,21 +3377,25 @@
     font-size:11px;
     font-weight:700;
 }
-.btn-export{
+button.btn-export{
     display:flex;
     align-items:center;
     gap:6px;
     border:none;
-    background:#16a34a;
+    background:linear-gradient(135deg,#059669,#047857);
     color:#fff;
     padding:10px 16px;
     border-radius:10px;
     cursor:pointer;
     font-weight:600;
+    box-shadow:0 4px 12px rgba(4,120,87,0.24);
+    transition:transform 0.2s, box-shadow 0.2s, filter 0.2s;
 }
 
 .btn-export:hover{
-    background:#15803d;
+    filter:brightness(1.06);
+    transform:translateY(-1px);
+    box-shadow:0 6px 16px rgba(4,120,87,0.3);
 }
 
 .student-active-row td{
@@ -3357,15 +3434,6 @@
     background:#fee2e2;
     color:#991b1b;
     border:1px solid #fca5a5;
-}
-
-button.btn-export {
-    background: green;
-    font-size: 12px;
-}
-button.btn-export :hover {
-    background: rgb(7, 77, 7);
-    font-size: 12px;
 }
 
 .report-card{
@@ -3488,10 +3556,6 @@ button.btn-export :hover {
 
 }
 
-button.btn-report {
-    background: red;
-}
-
 /* === THANH THAO TÁC DANH SÁCH === */
 .toolbar-actions {
     display: flex;
@@ -3500,7 +3564,12 @@ button.btn-report {
     margin-left: auto;
 }
 
-.toolbar-actions button {
+.toolbar-actions button,
+.mobile-actions-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     min-height: 44px;
     padding: 10px 14px;
     border: 0;
@@ -3509,26 +3578,40 @@ button.btn-report {
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.toolbar-actions button:hover:not(:disabled),
+.mobile-actions-menu button:hover:not(:disabled) {
+    filter: brightness(1.06);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.toolbar-actions button:active:not(:disabled),
+.mobile-actions-menu button:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .toolbar-actions button .material-icons-round {
     font-size: 18px;
 }
 
-.toolbar-actions button.btn-export {
-    background: linear-gradient(135deg, #059669, #047857);
-}
-
-.toolbar-actions button.btn-report {
+button.btn-report {
     background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.24);
 }
 
-.toolbar-actions button.btn-primary {
+button.btn-primary {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.24);
 }
 
-.toolbar-actions button.btn-leave {
+button.btn-leave {
     background: linear-gradient(135deg, #d97706, #b45309);
+    box-shadow: 0 4px 12px rgba(180, 83, 9, 0.24);
 }
 
 .mobile-actions-toggle,
@@ -3558,6 +3641,21 @@ button.btn-report {
 .student-card-qr { position:absolute; left:73.2%; top:59.4%; width:20.2%; aspect-ratio:1; padding:.65%; background:#fff; display:flex; align-items:center; justify-content:center; }
 .student-card-qr canvas, .student-card-qr img { width:100% !important; height:100% !important; }
 @media (max-width: 700px) { .student-card-controls { grid-template-columns:1fr; padding:14px; } .student-card-actions { padding:0 14px 14px; } .student-card-preview-wrap { padding:12px; } }
+
+/* === TRỢ LÝ AI (chỉ dashboard GLV) === */
+.ai-chat-toggle { position:fixed; right:22px; bottom:22px; z-index:9000; width:54px; height:54px; border:0; border-radius:50%; background:linear-gradient(135deg,#4338ca,#2563eb); color:#fff; box-shadow:0 10px 24px rgba(37,99,235,.32); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ai-chat-panel { position:fixed; right:22px; bottom:86px; z-index:9000; width:min(390px,calc(100vw - 24px)); border:1px solid #c7d2fe; border-radius:18px; overflow:hidden; background:#fff; box-shadow:0 18px 50px rgba(15,23,42,.24); }
+.ai-chat-panel.hidden { display:none; }
+.ai-chat-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; color:#fff; background:linear-gradient(135deg,#4338ca,#2563eb); font-weight:800; }
+.ai-chat-head button { border:0; background:transparent; color:#fff; cursor:pointer; }
+.ai-chat-messages { height:300px; overflow-y:auto; padding:14px; background:#f8fafc; display:flex; flex-direction:column; gap:10px; }
+.ai-message { max-width:88%; padding:10px 12px; border-radius:13px; white-space:pre-wrap; font-size:13px; line-height:1.45; }
+.ai-message.assistant { align-self:flex-start; background:#fff; border:1px solid #e2e8f0; color:#334155; }
+.ai-message.user { align-self:flex-end; background:#dbeafe; color:#1e3a8a; }
+.ai-chat-form { display:flex; gap:8px; padding:10px; border-top:1px solid #e2e8f0; }
+.ai-chat-form input { min-width:0; flex:1; border:1px solid #cbd5e1; border-radius:10px; padding:10px; font:inherit; }
+.ai-chat-form button { border:0; border-radius:10px; padding:0 13px; background:#2563eb; color:#fff; cursor:pointer; }
+@media (max-width:600px) { .ai-chat-toggle { right:16px; bottom:16px; } .ai-chat-panel { right:12px; bottom:78px; } }
 
 @media (max-width: 600px) {
     .table-toolbar {
@@ -4284,13 +4382,56 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
         // STATE & CONFIG
         // ============================================================
         const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev';
-        const GROUP = new URLSearchParams(window.location.search).get('group')?.toLowerCase() || '2b';
+        const GROUP = new URLSearchParams(window.location.search).get('group')?.toLowerCase() || 'man';
 
         function api(path) {
             const separator = path.includes('?') ? '&' : '?';
             return `${API_URL}${path}${separator}group=${encodeURIComponent(GROUP)}`;
         }
 
+        /* AI chat disabled by request.
+        function toggleAiChat() {
+            const panel = document.getElementById('aiChatPanel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) document.getElementById('aiChatInput').focus();
+        }
+
+        function appendAiMessage(text, role) {
+            const messages = document.getElementById('aiChatMessages');
+            const item = document.createElement('div');
+            item.className = `ai-message ${role}`;
+            item.textContent = text;
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+            return item;
+        }
+
+        async function sendAiMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('aiChatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            appendAiMessage(message, 'user');
+            input.value = '';
+            input.disabled = true;
+            const pending = appendAiMessage('Đang tra cứu…', 'assistant');
+            try {
+                const response = await fetch(api('/ai/chat'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+                pending.textContent = data.reply || data.error || 'Không thể trả lời câu hỏi này.';
+            } catch (error) {
+                pending.textContent = 'Không thể kết nối trợ lý AI.';
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        */
         let allStudents = [];
         let currentTableData = [];
         let pollingInterval = null;
