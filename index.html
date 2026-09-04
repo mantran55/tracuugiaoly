@@ -1265,7 +1265,7 @@
             <form class="search-form" id="searchForm">
                 <div class="search-input-wrap">
                     <span class="material-icons-round search-icon">search</span>
-                    <input type="text" id="studentId" placeholder="Nhập mã học viên trên thẻ..." required autocomplete="on">
+                    <input type="text" id="studentId" placeholder="Nhập mã học viên trên thẻ..." required autocomplete="on" autocapitalize="characters" spellcheck="false">
                 </div>
                 <button type="submit">
                     <span class="material-icons-round">manage_search</span>
@@ -1400,6 +1400,10 @@
             document.getElementById('serverProgressNote').textContent = 'Vui lòng thử lại sau ít phút.';
         }
 
+        document.getElementById('studentId').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1409,14 +1413,15 @@
                 return;
             }
             const dashboardGroups = {
-                GLVBH2026_2B: '2b',
-                GLVBH2026_1E: '1e',
-                GLVBH2026_2F: '2f',
+                GLVBH2026_MAN: 'man',
+                GLVBH2026_THAO: 'thao',
+                GLVBH2026_TRINH: 'trinh',
             };
 
-            if (dashboardGroups[studentId]) {
-                localStorage.setItem(LAST_DASHBOARD_CODE_KEY, studentId);
-                await openDashboardWhenReady(dashboardGroups[studentId]);
+            const dashboardCode = studentId.toUpperCase();
+            if (dashboardGroups[dashboardCode]) {
+                localStorage.setItem(LAST_DASHBOARD_CODE_KEY, dashboardCode);
+                await openDashboardWhenReady(dashboardGroups[dashboardCode]);
                 return;
             }
 
