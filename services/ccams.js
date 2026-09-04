@@ -45,7 +45,7 @@ async function getCCAMSStudentProfile(studentId) {
 }
 
 async function getAttendanceByClass(classId, date) {
-  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733", nienhoc: 3, khoi_lop: classId, loai: "all", search: "", date, to: date });
+  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733", nienhoc: 4, khoi_lop: classId, loai: "all", search: "", date, to: date });
   return rows(html).filter(cells => cells.length >= 9 && cells[1].text).map(cells => ({
     studentId: cells[1].text,
     mark: [5, 6, 7, 8].map((index, mark) => /check|✓|✔|✅/i.test(`${cells[index].html} ${cells[index].text}`) ? "CGTX"[mark] : "").join("")
@@ -53,7 +53,7 @@ async function getAttendanceByClass(classId, date) {
 }
 
 async function getCCAMSClasses() {
-  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733" });
+  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733", nienhoc: 4 });
   return [...html.matchAll(/<option\b[^>]*value=["']([^"']+)["'][^>]*>([\s\S]*?)<\/option>/gi)].map(match => ({ id: match[1], name: text(match[2]).replace(/^---\s*/, "") })).filter(item => item.id && item.id !== "all" && !item.id.startsWith("k_"));
 }
 
