@@ -16,9 +16,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const SHEET_GROUPS = {
-  "2b": "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E",
-  "1e": "1Fziw9eSbGjA-TLkSqpVbas5gFa9fkwsECLNeb_j11Ww",
-  "2f": "1LmM866E7FaPJwsdtE3w7I2tSVU_z3I9YTpndxjfjQVc"
+  "man": "1J1Fgyk_Lr5Vp9IK99DVF3Z1SaADpbxonsRNtVim6W_E",
+  "thao": "1Fziw9eSbGjA-TLkSqpVbas5gFa9fkwsECLNeb_j11Ww",
+  "trinh": "1LmM866E7FaPJwsdtE3w7I2tSVU_z3I9YTpndxjfjQVc"
 };
 
 // =========================
@@ -234,6 +234,57 @@ async function getSheetData(group) {
     return state.cacheData;
   }
   return await loadSheetData(group);
+}
+
+function normalizeSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseAiDate(message) {
+  const match = String(message || "").match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}))?\b/);
+  if (!match) return null;
+  const year = Number(match[3] || new Date().getFullYear());
+  return `${year}-${String(match[2]).padStart(2, "0")}-${String(match[1]).padStart(2, "0")}`;
+}
+
+async function buildAiContext(message, group) {
+  await getSheetData(group);
+  const state = getState(group);
+  const text = normalizeSearch(message);
+  const requestedDate = parseAiDate(message);
+
+  if (text.includes("vang") && requestedDate) {
+    const column = findAttendanceDateColumn(state.cacheData?.[2] || [], requestedDate);
+    if (column === -1) return `Không tìm thấy cột điểm danh ngày ${requestedDate} trong Sheet.`;
+    const absent = Object.values(state.studentMap)
+      .filter(row => !String(row[column] || "").toUpperCase().includes("C"))
+      .map(row => ({ name: String(row[2] || ""), studentId: String(row[1] || ""), className: String(row[3] || "") }));
+    return `Dữ liệu chính xác từ Sheet cho ngày ${requestedDate}. Có ${absent.length} học viên vắng: ${JSON.stringify(absent)}.`;
+  }
+
+  if (text.includes("so dien thoai") || text.includes("sdt") || text.includes("dien thoai")) {
+    const nameMatch = String(message || "").match(/(?:của|cua)\s+(.+?)(?:\?|$)/i);
+    const nameQuery = normalizeSearch(nameMatch?.[1] || message.replace(/số điện thoại|so dien thoai|sđt|sdt/gi, ""));
+    const matches = Object.values(state.studentMap)
+      .filter(row => normalizeSearch(row[2]).includes(nameQuery))
+      .slice(0, 3);
+    if (!matches.length) return "Không tìm thấy học viên khớp với tên được hỏi.";
+    const profiles = await Promise.all(matches.map(async row => {
+      const studentId = String(row[1] || "");
+      const profile = await getCCAMSStudentProfile(studentId);
+      return { name: String(row[2] || ""), studentId, className: String(row[3] || ""), phones: profile.phones || [] };
+    }));
+    return `Kết quả tra cứu số điện thoại: ${JSON.stringify(profiles)}.`;
+  }
+
+  return "Chưa nhận diện được truy vấn dữ liệu. Hiện hỗ trợ: danh sách vắng theo ngày (ví dụ: 'Ngày 21/07/2026 vắng những em nào?') và số điện thoại theo tên (ví dụ: 'Số điện thoại của Mai Linh?').";
 }
 
 // Lịch sử tham dự lấy trực tiếp từ các cột ngày ở sheet Thánh Lễ.
@@ -510,7 +561,7 @@ app.get("/student/:id", async (req, res) => {
       fatherName: ccamsProfile.fatherName || "",
       motherName: ccamsProfile.motherName || "",
       phones: ccamsProfile.phones || [],
-      avatar: `https://ccams.thongtinxuanloc.com/student/bienhoa/${studentId}/image`,
+      avatar: `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(studentId)}.jpg`,
       totalMass: Number(studentRow[5] || 0),
       catechism: Number(studentRow[8] || 0),
       adoration: sheetAttendance.adoration,
@@ -1256,6 +1307,56 @@ app.get("/", (req, res) => {
   res.json({ success: true, message: "Giaoly API đang hoạt động" });
 });
 
+/* AI chat disabled by request.
+app.post("/ai/chat", async (req, res) => {
+  try {
+    const message = String(req.body?.message || "").trim();
+    if (!message || message.length > 500) return res.status(400).json({ success: false, error: "Câu hỏi không hợp lệ" });
+    if (!req.env?.AI) return res.status(503).json({ success: false, error: "Chưa cấu hình Workers AI cho trợ lý" });
+    const group = getGroup(req);
+    const context = await buildAiContext(message, group);
+    const normalizedQuestion = normalizeSearch(message);
+    if (normalizedQuestion.includes("so dien thoai") || normalizedQuestion.includes("sdt") || normalizedQuestion.includes("dien thoai")) {
+      const phoneData = context.match(/:\s*(\[.*\])\.$/);
+      if (phoneData) {
+        const students = JSON.parse(phoneData[1]);
+        const reply = students.map(student => {
+          const phones = student.phones?.length ? student.phones.join(", ") : "chưa có số điện thoại";
+          return `${student.name} (${student.studentId}, lớp ${student.className}): ${phones}`;
+        }).join("\n");
+        return res.json({ success: true, reply: reply || "Không tìm thấy số điện thoại." });
+      }
+      return res.json({ success: true, reply: context });
+    }
+    const aiResult = await req.env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+      messages: [
+        { role: "system", content: "Bạn là trợ lý nội bộ cho giáo lý viên đã được ủy quyền. Chỉ trả lời bằng tiếng Việt, ngắn gọn, lịch sự, và chỉ dùng dữ liệu trong ngữ cảnh. Không suy đoán hoặc bịa dữ liệu. Được phép cung cấp số điện thoại phụ huynh khi câu hỏi hỏi về số điện thoại và ngữ cảnh có số đó, vì đây là tác vụ nghiệp vụ nội bộ. Khi có danh sách, trình bày tên, mã học viên và lớp rõ ràng." },
+        { role: "user", content: `Câu hỏi: ${message}\n\nNgữ cảnh dữ liệu đã được Worker lọc: ${context}` }
+      ],
+      max_tokens: 400
+    });
+    return res.json({ success: true, reply: aiResult.response || aiResult.result || "Không có phản hồi từ trợ lý AI." });
+    const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-5.6-luna",
+        reasoning: { effort: "low" },
+        instructions: "Bạn là trợ lý cho giáo lý viên. Chỉ trả lời bằng tiếng Việt, ngắn gọn, lịch sự, và chỉ dùng dữ liệu trong ngữ cảnh. Không suy đoán hoặc bịa dữ liệu. Khi có danh sách, trình bày tên, mã học viên và lớp rõ ràng.",
+        input: `Câu hỏi: ${message}\n\nNgữ cảnh dữ liệu đã được Worker lọc: ${context}`
+      })
+    });
+    const data = await aiResponse.json();
+    if (!aiResponse.ok) throw new Error(data?.error?.message || "Không thể gọi dịch vụ AI");
+    const reply = data.output_text || data.output?.flatMap(item => item.content || []).filter(item => item.type === "output_text").map(item => item.text).join("\n") || "Không có phản hồi từ trợ lý AI.";
+    res.json({ success: true, reply });
+  } catch (error) {
+    console.error("AI chat error:", error);
+    res.status(500).json({ success: false, error: error.message || "Không thể xử lý câu hỏi AI" });
+  }
+});
+
+*/
 function formatDateVN(dateStr) {
   const d = new Date(dateStr);
 
