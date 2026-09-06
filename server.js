@@ -21,6 +21,13 @@ const SHEET_GROUPS = {
   "trinh": "1LmM866E7FaPJwsdtE3w7I2tSVU_z3I9YTpndxjfjQVc"
 };
 
+// Khóa lớp CCAMS theo GLV để không phụ thuộc tên lớp có thể đổi giữa các niên khóa.
+const CCAMS_CLASS_IDS_BY_GROUP = {
+  man: ["l_10144", "l_10152"],
+  thao: ["l_10140"],
+  trinh: ["l_10139"]
+};
+
 // =========================
 // CACHE CONFIG
 // =========================
@@ -1494,10 +1501,10 @@ app.get("/classes", async (req, res) => {
     const ccamsClasses =
       await getCCAMSClasses();
 
-    const result =
-      ccamsClasses.filter(c =>
-        sheetClasses.includes(c.name)
-      );
+    const allowedClassIds = CCAMS_CLASS_IDS_BY_GROUP[group] || [];
+    const result = allowedClassIds.length
+      ? ccamsClasses.filter(c => allowedClassIds.includes(c.id))
+      : ccamsClasses.filter(c => sheetClasses.includes(c.name));
 
     res.json(result);
 
