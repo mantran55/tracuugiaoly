@@ -25,7 +25,7 @@ const SHEET_GROUPS = {
 const CCAMS_CLASS_IDS_BY_GROUP = {
   man: ["l_10144", "l_10152"],
   thao: ["l_10140"],
-  trinh: ["l_10139"]
+  trinh: ["l_10139", "l_10155"]
 };
 
 // =========================
