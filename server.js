@@ -83,6 +83,25 @@ function splitLeaveItems(value) {
     .filter(Boolean);
 }
 
+// Điểm trung bình từ các cột đã có điểm (bỏ qua cột trống) — dùng cho bảng xếp hạng Top học viên.
+function averageScore(score) {
+  if (!score) return null;
+  const fields = ["ghkiScore", "chkiScore", "ghkiiScore", "chkiiScore"];
+  let sum = 0, count = 0;
+  fields.forEach(key => {
+    const raw = score[key];
+    if (raw === "" || raw === undefined || raw === null) return;
+    const num = Number(String(raw).replace(",", "."));
+    if (Number.isFinite(num)) { sum += num; count++; }
+  });
+  return count ? sum / count : null;
+}
+
+// Có đơn "Vắng có phép" hay không (đơn thay thế buổi thứ 5 KHÔNG tính là vắng có phép).
+function hasExcusedLeave(leaveText) {
+  return splitLeaveItems(leaveText).some(item => /^Vắng có phép/i.test(item));
+}
+
 function parseAttendanceHeaderDate(value, targetYear) {
   if (typeof value === "number" && Number.isFinite(value)) {
     const date = new Date(Date.UTC(1899, 11, 30) + Math.round(value) * 86400000);
@@ -1038,18 +1057,24 @@ app.get("/student-summary", async (req, res) => {
 
     const students = Object.values(state.studentMap)
       .sort((a, b) => a._rowNumber - b._rowNumber)
-      .map(row => ({
-        studentId: row[1] || "",
-        name: row[2] || "",
-        className: row[3] || "",
-        totalMass: Number(row[5] || 0),
-        catechism: Number(row[8] || 0),
+      .map(row => {
+        const studentId = String(row[1] || "").trim();
+        const score = state.scoreMap[studentId] || {};
+        return {
+          studentId: row[1] || "",
+          name: row[2] || "",
+          className: row[3] || "",
+          totalMass: Number(row[5] || 0),
+          catechism: Number(row[8] || 0),
 
-        status:
-            state.statusMap[
-                String(row[1] || "").trim()
-            ] || ""
-    }));
+          status: state.statusMap[studentId] || "",
+          // Dùng cho bảng "Top học viên xuất sắc" ở Dashboard GLV — không tốn thêm lượt gọi Sheet
+          // vì scoreMap/leaveMap đã có sẵn trong cache khi loadSheetData chạy.
+          avgScore: averageScore(score),
+          hasExcusedLeave: hasExcusedLeave(state.leaveMap[studentId]),
+          avatar: `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(studentId)}.jpg`
+        };
+      });
     res.json({
       success: true,
       total: students.length,
