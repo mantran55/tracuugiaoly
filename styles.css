@@ -4316,6 +4316,116 @@ body {
     }
 }
 
+/* === MOBILE FIRST OVERRIDES ===
+ * Giữ các phần tử quan trọng luôn vừa chiều ngang điện thoại, không phụ thuộc
+ * vào flex sizing của trình duyệt hoặc CSS cũ trong cache.
+ */
+@media (max-width: 768px) {
+    body.index-page,
+    body.dashboard-page {
+        overflow-x: hidden;
+    }
+
+    body.index-page .header,
+    body.dashboard-page .header {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    body.index-page .container,
+    body.dashboard-page .container {
+        width: 100%;
+        max-width: none;
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    /* Trang tra cứu: ô nhập và nút là hai hàng đầy đủ chiều ngang. */
+    body.index-page .search-card {
+        width: calc(100% - 8px);
+        margin-left: auto;
+        margin-right: auto;
+        padding: 9px;
+        border-radius: 22px;
+    }
+
+    body.index-page .search-form {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+        gap: 10px;
+    }
+
+    body.index-page .search-input-wrap {
+        display: block !important;
+        grid-column: 1;
+        width: 100% !important;
+        min-width: 0;
+        flex: none !important;
+    }
+
+    body.index-page .search-form input {
+        display: block;
+        width: 100% !important;
+        min-width: 0;
+        min-height: 52px;
+        padding: 14px 16px 14px 46px;
+        font-size: 16px;
+    }
+
+    body.index-page .search-form button {
+        grid-column: 1;
+        width: 100% !important;
+        min-height: 54px;
+        justify-content: center;
+    }
+
+    body.index-page .stats,
+    body.dashboard-page .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    body.index-page .stat-box,
+    body.dashboard-page .stat-box {
+        min-width: 0;
+        padding: 18px 10px 15px;
+    }
+
+    body.dashboard-page .table-toolbar,
+    body.dashboard-page .toolbar-actions,
+    body.dashboard-page .monthly-report-controls {
+        min-width: 0;
+    }
+
+    body.dashboard-page .modal-content {
+        width: calc(100vw - 20px);
+        max-width: none;
+        max-height: calc(100dvh - 20px);
+    }
+
+    body.dashboard-page .student-card-modal .modal-content {
+        width: calc(100vw - 12px);
+    }
+
+    body.dashboard-page .student-card-preview-wrap {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 380px) {
+    body.index-page .header h1,
+    body.dashboard-page .header h1 {
+        font-size: 22px;
+    }
+
+    body.index-page .container,
+    body.dashboard-page .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
 /* ============================================================
    XỬ LÝ MÀN HÌNH RẤT NHỎ (< 380px) —的超小屏
    ============================================================ */
@@ -5459,4 +5569,45 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     .copy-phone { min-height:36px; margin:5px 6px 0 0; padding:6px 10px; font-size:12px; }
     .student-card-preview { position:relative; width:min(920px,100%); aspect-ratio:92/61; container-type:inline-size; background:url('thedeo.png') center/100% 100% no-repeat; color:#063985; font-family:'Be Vietnam Pro',sans-serif; }
 }
+}
+
+/* Final mobile guard: placed after every legacy rule so it cannot be overridden. */
+@media screen and (max-width: 768px) {
+    body.index-page .search-card {
+        width: calc(100% - 8px) !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 9px !important;
+    }
+
+    body.index-page form.search-form {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        flex-direction: unset !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    body.index-page form.search-form > .search-input-wrap {
+        display: block !important;
+        grid-column: 1 / -1 !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    body.index-page form.search-form > .search-input-wrap > input {
+        display: block !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 52px !important;
+        font-size: 16px !important;
+    }
+
+    body.index-page form.search-form > button {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+        min-height: 54px !important;
+    }
 }
