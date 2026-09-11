@@ -5602,7 +5602,24 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
         width: 100% !important;
         min-width: 0 !important;
         min-height: 52px !important;
+        padding: 14px 16px 14px 54px !important;
         font-size: 16px !important;
+    }
+
+    /* Keep the search glyph in its own fixed left gutter on phones. */
+    body.index-page form.search-form > .search-input-wrap {
+        position: relative !important;
+        isolation: isolate;
+    }
+
+    body.index-page form.search-form > .search-input-wrap > .search-icon {
+        position: absolute !important;
+        left: 18px !important;
+        top: 50% !important;
+        z-index: 2;
+        transform: translateY(-50%) !important;
+        line-height: 1;
+        pointer-events: none;
     }
 
     body.index-page form.search-form > button {
