@@ -1188,7 +1188,8 @@ body {
             .logo-glow { inset: -32px; }
 
             .search-form { flex-wrap: wrap; }
-            .search-form input { padding: 14px 16px 14px 44px; }
+            .search-input-wrap { flex: 0 0 100%; width: 100%; }
+            .search-form input { width: 100%; padding: 14px 16px 14px 44px; }
             .search-form button { width: 100%; padding: 16px; justify-content: center; }
 
             .stats { grid-template-columns: repeat(2, 1fr); }
