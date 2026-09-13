@@ -12,6 +12,50 @@ body {
     min-height: 100%;
 }
 
+/* QR scanner for the public lookup page. */
+.scan-button {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    box-shadow: none !important;
+    border: 1px solid #bfdbfe !important;
+}
+.scan-button:hover { background: #dbeafe !important; }
+.qr-scanner-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .72);
+    backdrop-filter: blur(5px);
+}
+.qr-scanner-modal.hidden { display: none; }
+.qr-scanner-dialog {
+    position: relative;
+    width: min(100%, 430px);
+    padding: 24px;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 25px 70px rgba(15, 23, 42, .38);
+}
+.qr-scanner-title { display: flex; align-items: center; gap: 10px; color: #1d4ed8; }
+.qr-scanner-title h2 { margin: 0; font-size: 20px; }
+.qr-scanner-title .material-icons-round { font-size: 28px; }
+.qr-scanner-dialog p { margin: 10px 0 16px; color: #64748b; font-size: 14px; line-height: 1.5; }
+.qr-scanner-close { position: absolute; top: 12px; right: 12px; border: 0; background: #f1f5f9; color: #475569; border-radius: 50%; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; }
+.qr-camera-frame { position: relative; overflow: hidden; aspect-ratio: 1 / 1; border-radius: 18px; background: #0f172a; }
+.qr-camera-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.qr-scan-guide { position: absolute; inset: 17%; border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 999px rgba(15, 23, 42, .16); pointer-events: none; }
+.qr-scan-guide::after { content: ''; position: absolute; left: 8%; right: 8%; top: 50%; height: 2px; background: #60a5fa; box-shadow: 0 0 12px #60a5fa; animation: qrScanLine 1.7s ease-in-out infinite alternate; }
+@keyframes qrScanLine { from { transform: translateY(-62px); } to { transform: translateY(62px); } }
+.qr-scanner-note { margin-bottom: 0 !important; text-align: center; }
+@media screen and (max-width: 768px) {
+    body.index-page form.search-form > .scan-button { grid-column: 1 / -1 !important; width: 100% !important; min-height: 50px !important; justify-content: center; }
+    .qr-scanner-modal { padding: 14px; }
+    .qr-scanner-dialog { padding: 20px; border-radius: 20px; }
+}
+
 *,
 *::before,
 *::after {

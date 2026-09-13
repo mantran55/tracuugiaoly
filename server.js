@@ -6,6 +6,7 @@ const { createSheetsClient } = require("./services/google-sheets");
 const {
   getCCAMS,
   getCCAMSStudentProfile,
+  getCCAMSStudentAttendance,
   getAttendanceByClass,
   getCCAMSClasses
 } = require("./services/ccams");
@@ -546,7 +547,31 @@ app.get("/student/:id", async (req, res) => {
   try {
     const studentId = req.params.id.toString().trim();
     const requestedGroup = String(req.query.group || "").trim().toLowerCase();
-    const groups = requestedGroup ? [getGroup(req)] : Object.keys(SHEET_GROUPS);
+    const requestedGroupValue = requestedGroup ? getGroup(req) : "";
+    const ccamsStudent = await getCCAMSStudentAttendance(studentId);
+    if (!ccamsStudent) {
+      return res.json({ success: false, message: "Không tìm thấy học viên trên CCAMS" });
+    }
+
+    // Ở Dashboard GLV, chỉ mở hồ sơ học viên thuộc lớp GLV phụ trách.
+    // Danh sách Sheet không còn là điều kiện để xem hồ sơ: em mới/chưa có
+    // trong Sheet vẫn xem được dữ liệu CCAMS, nhưng không lộ điểm học tập.
+    if (requestedGroupValue) {
+      const ccamsClasses = await getCCAMSClasses();
+      const allowedIds = CCAMS_CLASS_IDS_BY_GROUP[requestedGroupValue] || [];
+      const managedClassNames = new Set(ccamsClasses
+        .filter(item => allowedIds.includes(item.id))
+        .map(item => String(item.name || "").replace(/\s+/g, " ").trim().toLowerCase()));
+      const currentClass = String(ccamsStudent.className || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (!managedClassNames.has(currentClass)) {
+        return res.status(403).json({
+          success: false,
+          message: "Học viên không thuộc lớp bạn đang quản lý"
+        });
+      }
+    }
+
+    const groups = requestedGroupValue ? [requestedGroupValue] : Object.keys(SHEET_GROUPS);
 
     let group = null;
     let state = null;
@@ -563,37 +588,34 @@ app.get("/student/:id", async (req, res) => {
       }
     }
 
-    if (!studentRow) {
-      return res.json({ success: false, message: "Không tìm thấy học sinh" });
-    }
-
-    const sheetAttendance = getStudentSheetAttendance(state, studentRow);
-    
-    // Gọi 1 lần duy nhất
-    const score = state.scoreMap[studentId] || {};
+    const score = studentRow ? (state.scoreMap[studentId] || {}) : {};
     const ccamsProfile = await getCCAMSStudentProfile(studentId);
 
     return res.json({
       success: true,
-      studentId: studentRow[1] || "",
-      name: studentRow[2] || "",
-      className: studentRow[3] || "",
-      status:
-      state.statusMap[studentId] || "",
-      leave: state.leaveMap[studentId] || "",
-      leaveItems: splitLeaveItems(state.leaveMap[studentId]),
-      group,
-      dateOfBirth: ccamsProfile.dateOfBirth || "",
-      fatherName: ccamsProfile.fatherName || "",
-      motherName: ccamsProfile.motherName || "",
+      studentId: ccamsStudent.studentId || studentId,
+      name: ccamsStudent.name || studentRow?.[2] || "",
+      className: ccamsStudent.className || studentRow?.[3] || "",
+      // Em thuộc lớp GLV phụ trách nhưng chưa được thêm vào Sheet được xem là
+      // đang học mặc định; trạng thái thực tế vẫn ưu tiên dữ liệu Sheet.
+      status: studentRow ? (state.statusMap[studentId] || "đang học") : "đang học",
+      leave: studentRow ? (state.leaveMap[studentId] || "") : "",
+      leaveItems: studentRow ? splitLeaveItems(state.leaveMap[studentId]) : [],
+      group: group || "",
+      // Điểm học tập chỉ nằm trong Sheet của lớp đó. Em cùng lớp nhưng chưa
+      // có dòng Sheet vẫn xem được hồ sơ/điểm danh CCAMS, không hiện điểm.
+      showScores: Boolean(studentRow),
+      dateOfBirth: ccamsStudent.dateOfBirth || ccamsProfile.dateOfBirth || "",
+      fatherName: ccamsStudent.fatherName || ccamsProfile.fatherName || "",
+      motherName: ccamsStudent.motherName || ccamsProfile.motherName || "",
       phones: ccamsProfile.phones || [],
       avatar: `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(studentId)}.jpg`,
-      totalMass: Number(studentRow[5] || 0),
-      catechism: Number(studentRow[8] || 0),
-      adoration: sheetAttendance.adoration,
-      confession: sheetAttendance.confession,
+      totalMass: ccamsStudent.totalMass,
+      catechism: ccamsStudent.catechism,
+      adoration: ccamsStudent.adoration,
+      confession: ccamsStudent.confession,
       scores: score,
-      attendance: sheetAttendance.attendance
+      attendance: ccamsStudent.attendance
     });
 
   } catch (err) {

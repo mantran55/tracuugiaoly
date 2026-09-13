@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="favico.png">
-    <link rel="stylesheet" href="styles.css?v=20260911-mobile">
+    <link rel="stylesheet" href="styles.css?v=20260913-qr">
 </head>
 
 <body class="index-page">
@@ -61,6 +61,10 @@
                     <span class="material-icons-round search-icon">search</span>
                     <input type="text" id="studentId" placeholder="Nhập mã học viên trên thẻ..." required autocomplete="on" autocapitalize="characters" spellcheck="false">
                 </div>
+                <button type="button" class="scan-button" onclick="openQrScanner()">
+                    <span class="material-icons-round">qr_code_scanner</span>
+                    QUÉT THẺ
+                </button>
                 <button type="submit">
                     <span class="material-icons-round">manage_search</span>
                     TRA CỨU
@@ -80,6 +84,22 @@
         </div>
         </div>
 
+        <div class="qr-scanner-modal hidden" id="qrScannerModal" onclick="handleQrScannerBackdrop(event)" aria-hidden="true">
+            <div class="qr-scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="qrScannerTitle">
+                <button type="button" class="qr-scanner-close" onclick="closeQrScanner()" aria-label="Đóng quét mã">
+                    <span class="material-icons-round">close</span>
+                </button>
+                <div class="qr-scanner-title"><span class="material-icons-round">qr_code_scanner</span><h2 id="qrScannerTitle">Quét mã QR trên thẻ</h2></div>
+                <p id="qrScannerHint">Đưa mã QR trên thẻ vào khung hình.</p>
+                <div class="qr-camera-frame">
+                    <video id="qrScannerVideo" playsinline muted></video>
+                    <div id="qrScannerReader"></div>
+                    <div class="qr-scan-guide"></div>
+                </div>
+                <p class="qr-scanner-note">Sau khi nhận diện mã, hệ thống sẽ tự mở hồ sơ học viên.</p>
+            </div>
+        </div>
+
         <footer class="footer">
             <div class="footer-text">GIÁO XỨ BIÊN HÒA</div>
             
@@ -88,6 +108,82 @@
     </div>
 
     <script>
+
+        let qrScannerStream = null;
+        let qrScanTimer = null;
+        let html5QrScanner = null;
+
+        function getStudentIdFromQr(value) {
+            const text = String(value || '').trim();
+            const pathMatch = text.match(/\/(\d{5,})(?:[/?#]|$)/);
+            const idMatch = text.match(/^\d{5,}$/) || text.match(/\b(\d{5,})\b/);
+            return pathMatch?.[1] || idMatch?.[1] || '';
+        }
+
+        async function handleQrResult(value) {
+            const studentId = getStudentIdFromQr(value);
+            if (!studentId) {
+                document.getElementById('qrScannerHint').textContent = 'Mã này không có mã học viên hợp lệ. Vui lòng thử lại.';
+                return;
+            }
+            await closeQrScanner();
+            document.getElementById('studentId').value = studentId;
+            document.getElementById('searchForm').requestSubmit();
+        }
+
+        async function openQrScanner() {
+            const modal = document.getElementById('qrScannerModal');
+            const hint = document.getElementById('qrScannerHint');
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            hint.textContent = 'Đang mở camera…';
+            try {
+                const video = document.getElementById('qrScannerVideo');
+                qrScannerStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' } }, audio: false
+                });
+                video.srcObject = qrScannerStream;
+                await video.play();
+                if ('BarcodeDetector' in window) {
+                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
+                    const scan = async () => {
+                        if (!qrScannerStream) return;
+                        try {
+                            const codes = await detector.detect(video);
+                            if (codes[0]?.rawValue) return handleQrResult(codes[0].rawValue);
+                        } catch (_) { /* Camera đang lấy nét, tiếp tục quét. */ }
+                        qrScanTimer = window.setTimeout(scan, 180);
+                    };
+                    scan();
+                    return;
+                }
+                hint.textContent = 'Trình duyệt chưa hỗ trợ quét QR tự động. Hãy dùng Chrome mới nhất hoặc nhập mã trên thẻ.';
+            } catch (error) {
+                hint.textContent = 'Không thể mở camera. Hãy cấp quyền camera rồi thử lại, hoặc nhập mã trên thẻ.';
+                console.error('QR scanner:', error);
+            }
+        }
+
+        async function closeQrScanner() {
+            if (qrScanTimer) window.clearTimeout(qrScanTimer);
+            qrScanTimer = null;
+            if (html5QrScanner) {
+                try { await html5QrScanner.stop(); } catch (_) { }
+                html5QrScanner = null;
+            }
+            if (qrScannerStream) qrScannerStream.getTracks().forEach(track => track.stop());
+            qrScannerStream = null;
+            const video = document.getElementById('qrScannerVideo');
+            if (video) video.srcObject = null;
+            const modal = document.getElementById('qrScannerModal');
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function handleQrScannerBackdrop(event) {
+            if (event.target === event.currentTarget) closeQrScanner();
+        }
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -426,7 +522,7 @@
             </div>
 
             <!-- BẢNG KẾT QUẢ HỌC TẬP -->
-            <section class="section">
+            <section class="section score-section">
                 <div class="section-header">
                     <div class="section-title">
                         <span class="material-icons-round">school</span>
@@ -491,6 +587,12 @@
             
 
             `;
+
+            // Học viên thuộc lớp GLV quản lý nhưng chưa có trong Sheet chỉ
+            // hiển thị hồ sơ và điểm danh từ CCAMS, không hiển thị điểm học tập.
+            if (data.showScores === false) {
+                result.querySelector('.score-section')?.remove();
+            }
 
             /* Đếm số */
             setTimeout(() => {

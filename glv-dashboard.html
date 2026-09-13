@@ -1382,7 +1382,7 @@
             </div>
 
             <!-- BẢNG KẾT QUẢ HỌC TẬP -->
-            <section class="section">
+            <section class="section score-section">
                 <div class="section-header">
                     <div class="section-title">
                         <span class="material-icons-round">school</span>
@@ -1445,6 +1445,12 @@
                 </div>
             </section>
             `;
+
+            // Em cùng lớp nhưng chưa có dòng trong Sheet không có dữ liệu điểm.
+            if (data.showScores === false) {
+                result.querySelector('.score-section')?.remove();
+                result.querySelector('.status-editor')?.remove();
+            }
 
             setTimeout(() => {
                 document.querySelectorAll('.stat-number[data-target]').forEach(el => {
