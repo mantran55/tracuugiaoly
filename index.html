@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="favico.png">
-    <link rel="stylesheet" href="styles.css?v=20260913-qr2">
+    <link rel="stylesheet" href="styles.css?v=20260913-qr3">
 </head>
 
 <body class="index-page">
@@ -150,7 +150,7 @@
                 await loadQrLibrary();
                 html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
                 await html5QrScanner.start(
-                    { facingMode: { ideal: 'environment' } },
+                    'environment',
                     { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
                     decodedText => handleQrResult(decodedText),
                     () => {}
