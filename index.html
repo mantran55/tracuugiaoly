@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="favico.png">
-    <link rel="stylesheet" href="styles.css?v=20260913-qr">
+    <link rel="stylesheet" href="styles.css?v=20260913-qr2">
 </head>
 
 <body class="index-page">
@@ -112,12 +112,54 @@
         let qrScannerStream = null;
         let qrScanTimer = null;
         let html5QrScanner = null;
+        let qrLibraryPromise = null;
 
         function getStudentIdFromQr(value) {
             const text = String(value || '').trim();
-            const pathMatch = text.match(/\/(\d{5,})(?:[/?#]|$)/);
+            // Nhận cả link chuẩn .../gxbienhoa/2024985 và link có phần
+            // đường dẫn đứng trước/sau mã học viên.
+            const pathMatch = text.match(/\/gxbienhoa\/(\d{5,})(?:[/?#]|$)/i) || text.match(/\/(\d{5,})(?:[/?#]|$)/);
             const idMatch = text.match(/^\d{5,}$/) || text.match(/\b(\d{5,})\b/);
             return pathMatch?.[1] || idMatch?.[1] || '';
+        }
+
+        function loadQrLibrary() {
+            if (window.Html5Qrcode) return Promise.resolve();
+            if (qrLibraryPromise) return qrLibraryPromise;
+            qrLibraryPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Không tải được bộ quét QR'));
+                document.head.appendChild(script);
+            });
+            return qrLibraryPromise;
+        }
+
+        async function startFallbackQrScanner() {
+            const hint = document.getElementById('qrScannerHint');
+            const video = document.getElementById('qrScannerVideo');
+            const reader = document.getElementById('qrScannerReader');
+            hint.textContent = 'Đang khởi động bộ quét QR…';
+            if (qrScannerStream) qrScannerStream.getTracks().forEach(track => track.stop());
+            qrScannerStream = null;
+            video.srcObject = null;
+            video.classList.add('hidden');
+            reader.innerHTML = '';
+            try {
+                await loadQrLibrary();
+                html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
+                await html5QrScanner.start(
+                    { facingMode: { ideal: 'environment' } },
+                    { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
+                    decodedText => handleQrResult(decodedText),
+                    () => {}
+                );
+                hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
+            } catch (error) {
+                hint.textContent = 'Không thể mở camera. Hãy cấp quyền camera và mở web bằng Chrome hoặc Safari bản mới.';
+                console.error('QR fallback scanner:', error);
+            }
         }
 
         async function handleQrResult(value) {
@@ -158,7 +200,7 @@
                     scan();
                     return;
                 }
-                hint.textContent = 'Trình duyệt chưa hỗ trợ quét QR tự động. Hãy dùng Chrome mới nhất hoặc nhập mã trên thẻ.';
+                await startFallbackQrScanner();
             } catch (error) {
                 hint.textContent = 'Không thể mở camera. Hãy cấp quyền camera rồi thử lại, hoặc nhập mã trên thẻ.';
                 console.error('QR scanner:', error);
@@ -175,7 +217,11 @@
             if (qrScannerStream) qrScannerStream.getTracks().forEach(track => track.stop());
             qrScannerStream = null;
             const video = document.getElementById('qrScannerVideo');
-            if (video) video.srcObject = null;
+            if (video) {
+                video.srcObject = null;
+                video.classList.remove('hidden');
+            }
+            document.getElementById('qrScannerReader').innerHTML = '';
             const modal = document.getElementById('qrScannerModal');
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
