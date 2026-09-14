@@ -201,7 +201,8 @@
             html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
             const frameWidth = Math.min(reader.clientWidth || 280, 300);
             await html5QrScanner.start(
-                { facingMode: { ideal: 'environment' } },
+                // html5-qrcode trên Safari chỉ chấp nhận chuỗi hoặc `{ exact: ... }`.
+                { facingMode: { exact: 'environment' } },
                 { fps: 10, qrbox: { width: frameWidth, height: frameWidth }, aspectRatio: 1, disableFlip: false },
                 decodedText => handleQrResult(decodedText),
                 () => {}
