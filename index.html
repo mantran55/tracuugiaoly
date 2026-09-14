@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>Tra Cứu Điểm Danh - Giáo Xứ Biên Hòa</title>
 
@@ -92,7 +92,7 @@
                 <div class="qr-scanner-title"><span class="material-icons-round">qr_code_scanner</span><h2 id="qrScannerTitle">Quét mã QR trên thẻ</h2></div>
                 <p id="qrScannerHint">Đưa mã QR trên thẻ vào khung hình.</p>
                 <div class="qr-camera-frame">
-                    <video id="qrScannerVideo" playsinline muted></video>
+                    <video id="qrScannerVideo" playsinline webkit-playsinline muted disablepictureinpicture></video>
                     <div id="qrScannerReader"></div>
                     <div class="qr-scan-guide"></div>
                 </div>
@@ -118,6 +118,8 @@
             'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'
         ];
         let qrScannerStream = null, qrScanTimer = null, html5QrScanner = null, qrLibraryPromise = null;
+        let isHandlingQrResult = false;
+        let scannerScrollY = 0;
 
         function getStudentIdFromQr(value) {
             const text = String(value || '').trim();
@@ -197,9 +199,10 @@
             reader.innerHTML = '';
             await loadQrLibrary();
             html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
+            const frameWidth = Math.min(reader.clientWidth || 280, 300);
             await html5QrScanner.start(
-                { facingMode: 'environment' },
-                { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
+                { facingMode: { ideal: 'environment' } },
+                { fps: 10, qrbox: { width: frameWidth, height: frameWidth }, aspectRatio: 1, disableFlip: false },
                 decodedText => handleQrResult(decodedText),
                 () => {}
             );
@@ -212,6 +215,9 @@
                 document.getElementById('qrScannerHint').textContent = 'Mã này không có mã học viên hợp lệ. Vui lòng thử lại.';
                 return;
             }
+            // html5-qrcode có thể trả cùng một mã nhiều lần liên tiếp.
+            if (isHandlingQrResult) return;
+            isHandlingQrResult = true;
             await closeQrScanner();
             document.getElementById('studentId').value = studentId;
             document.getElementById('searchForm').requestSubmit();
@@ -241,6 +247,9 @@
             const hint = document.getElementById('qrScannerHint');
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
+            isHandlingQrResult = false;
+            scannerScrollY = window.scrollY;
+            document.body.classList.add('qr-scanner-open');
             if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
                 hint.textContent = 'Thiết bị/trình duyệt này không cho phép mở camera (web cần chạy qua HTTPS). Bạn có thể chụp ảnh mã QR hoặc nhập mã trên thẻ.';
                 return;
@@ -274,6 +283,8 @@
             const modal = document.getElementById('qrScannerModal');
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('qr-scanner-open');
+            window.scrollTo(0, scannerScrollY);
         }
 
         function handleQrScannerBackdrop(event) {
