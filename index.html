@@ -355,6 +355,13 @@
 
         const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev';
         const DASHBOARD_CODE_KEY = 'giaoly_dashboard_code';
+        const LAST_STUDENT_LOOKUP_KEY = 'giaoly_last_student_lookup';
+
+        // GLV dùng máy cá nhân có thể mở lại Dashboard nhanh hơn.
+        // Ưu tiên mã GLV đã lưu, nếu không mới hiện mã học viên gần nhất.
+        const savedDashboardCode = localStorage.getItem(DASHBOARD_CODE_KEY);
+        const lastStudentLookup = localStorage.getItem(LAST_STUDENT_LOOKUP_KEY);
+        document.getElementById('studentId').value = savedDashboardCode || lastStudentLookup || '';
 
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -394,6 +401,10 @@
 
         document.getElementById('studentId').addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
+            const value = e.target.value.trim();
+            if (value && !value.startsWith('GLVBH2026_')) {
+                localStorage.setItem(LAST_STUDENT_LOOKUP_KEY, value);
+            }
         });
 
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
@@ -414,13 +425,15 @@
                     });
                     const auth = await authResponse.json();
                     if (!authResponse.ok || !auth.success) throw new Error(auth.error || 'Mã đăng nhập không đúng');
-                    sessionStorage.setItem(DASHBOARD_CODE_KEY, dashboardCode);
+                    localStorage.setItem(DASHBOARD_CODE_KEY, dashboardCode);
                     await openDashboardWhenReady(auth.group);
                 } catch (error) {
                     showToast(error.message || 'Mã đăng nhập không đúng');
                 }
                 return;
             }
+
+            localStorage.setItem(LAST_STUDENT_LOOKUP_KEY, studentId);
 
             const result = document.getElementById('result');
 

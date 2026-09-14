@@ -2189,9 +2189,26 @@ body.qr-scanner-open { overflow: hidden; touch-action: none; }
             transition: border-color 0.25s;
         }
 
-        .table-toolbar select:focus {
+.table-toolbar select:focus {
             border-color: var(--blue-soft);
         }
+
+        .status-filter {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-height:48px;
+            padding:8px 11px;
+            border:1px solid #dbeafe;
+            border-radius:13px;
+            background:#f8fbff;
+        }
+        .status-filter-label { display:flex; align-items:center; gap:5px; color:var(--blue-deep); font-size:12px; font-weight:800; white-space:nowrap; }
+        .status-filter-label .material-icons-round { font-size:17px; }
+        .status-filter-options { display:flex; align-items:center; flex-wrap:wrap; gap:5px 8px; }
+        .status-filter-check { display:flex; align-items:center; gap:4px; color:#475569; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; }
+        .status-filter-check input { width:15px; height:15px; margin:0; accent-color:var(--blue); cursor:pointer; }
+        .status-filter-all { color:var(--blue-deep); }
 
         .table-toolbar button {
             border: 1.5px solid var(--blue-pale);
@@ -5334,6 +5351,10 @@ button.btn-leave {
         min-width: 0;
     }
 
+    .status-filter { grid-column:1 / -1; align-items:flex-start; flex-direction:column; gap:7px; }
+    .status-filter-options { gap:7px 10px; }
+    .status-filter-check { font-size:11px; }
+
     .toolbar-actions {
         display: none;
     }
@@ -5683,4 +5704,40 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
         width: 100% !important;
         min-height: 54px !important;
     }
+}
+
+/* Lọc tình trạng nằm ở cột phải danh sách trên màn hình rộng. */
+.student-list-layout { display: grid; grid-template-columns: minmax(0, 1fr) 218px; gap: 16px; align-items: start; }
+.student-list-layout .status-filter { position: sticky; top: 16px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 15px; border: 1px solid #dbeafe; border-radius: 16px; background: rgba(255,255,255,.94); box-shadow: 0 10px 28px rgba(30,64,175,.08); }
+.student-list-layout .status-filter-label { padding-bottom: 10px; border-bottom: 1px solid #e0ecff; font-size: 14px; }
+.student-list-layout .status-filter-options { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.student-list-layout .status-filter-check { justify-content: flex-start; gap: 8px; padding: 8px 7px; border-radius: 9px; font-size: 12px; }
+.student-list-layout .status-filter-check:hover { background: #eff6ff; }
+.student-list-layout .status-filter-check input { width: 16px; height: 16px; }
+
+@media screen and (max-width: 900px) {
+    .student-list-layout { grid-template-columns: 1fr; }
+    .student-list-layout .status-filter { position: static; }
+    .student-list-layout .status-filter-options { flex-direction: row; flex-wrap: wrap; gap: 5px 10px; }
+    .student-list-layout .status-filter-label { padding-bottom: 7px; }
+}
+
+@media screen and (max-width: 768px) {
+    .student-list-layout .status-filter { display: none; }
+}
+
+/* Điều hướng hồ sơ học viên: tận dụng khoảng trống hai bên modal trên desktop. */
+.student-modal-nav { position: fixed; top: 50%; z-index: 10001; display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid rgba(255,255,255,.6); border-radius: 50%; background: rgba(30,64,175,.94); color: #fff; box-shadow: 0 10px 24px rgba(15,23,42,.28); cursor: pointer; transform: translateY(-50%); transition: transform .18s ease, background .18s ease, opacity .18s ease; }
+.student-modal-nav:hover:not(:disabled) { background:#2563eb; transform: translateY(-50%) scale(1.08); }
+.student-modal-nav:disabled { opacity:.32; cursor:not-allowed; }
+.student-modal-nav .material-icons-round { font-size: 36px; }
+.student-modal-nav-prev { left: max(20px, calc(50% - 580px)); }
+.student-modal-nav-next { right: max(20px, calc(50% - 580px)); }
+
+@media screen and (max-width: 700px) {
+    .student-modal-nav { top:auto; bottom:20px; width:46px; height:46px; transform:none; }
+    .student-modal-nav:hover:not(:disabled) { transform:scale(1.06); }
+    .student-modal-nav-prev { left:18px; }
+    .student-modal-nav-next { right:18px; }
+    .student-modal-nav .material-icons-round { font-size:30px; }
 }

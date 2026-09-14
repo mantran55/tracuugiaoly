@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260911-mobile">
+    <link rel="stylesheet" href="styles.css?v=20260914-studentnav">
 </head>
 
 <body class="dashboard-page">
@@ -235,22 +235,37 @@
 
             </div>
 
-            <div class="table-card">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Mã HS</th>
-                                <th>Họ Tên</th>
-                                <th>Tình Trạng</th>
-                                <th>Lớp</th>
-                                <th>TL</th>
-                                <th>GL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentTable"></tbody>
-                    </table>
+            <div class="student-list-layout">
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã HS</th>
+                                    <th>Họ Tên</th>
+                                    <th>Tình Trạng</th>
+                                    <th>Lớp</th>
+                                    <th>TL</th>
+                                    <th>GL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTable"></tbody>
+                        </table>
+                    </div>
                 </div>
+                <aside class="status-filter" id="statusFilter" aria-label="Lọc tình trạng học viên">
+                    <span class="status-filter-label"><span class="material-icons-round">how_to_reg</span>Tình trạng</span>
+                    <div class="status-filter-options">
+                        <label class="status-filter-check status-filter-all"><input type="checkbox" value="all" checked onchange="onStatusFilterChanged(this)"><span>Tất cả</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="đang học" onchange="onStatusFilterChanged(this)"><span>Đang học</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="nghỉ ngang" onchange="onStatusFilterChanged(this)"><span>Nghỉ ngang</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="nghỉ từ đầu" onchange="onStatusFilterChanged(this)"><span>Nghỉ từ đầu</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="chuyển xứ" onchange="onStatusFilterChanged(this)"><span>Chuyển xứ</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="nợ bài" onchange="onStatusFilterChanged(this)"><span>Nợ bài</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="thiếu điểm lễ" onchange="onStatusFilterChanged(this)"><span>Thiếu điểm lễ</span></label>
+                        <label class="status-filter-check"><input type="checkbox" value="thiếu điểm giáo lý" onchange="onStatusFilterChanged(this)"><span>Thiếu điểm giáo lý</span></label>
+                    </div>
+                </aside>
             </div>
         </section>
 
@@ -358,6 +373,12 @@
             <button class="modal-close" onclick="closeStudentModal()">✕</button>
             <div id="modalResult"></div>
         </div>
+        <button type="button" id="studentPrevButton" class="student-modal-nav student-modal-nav-prev" onclick="navigateStudent(-1)" aria-label="Học viên trước">
+            <span class="material-icons-round">chevron_left</span>
+        </button>
+        <button type="button" id="studentNextButton" class="student-modal-nav student-modal-nav-next" onclick="navigateStudent(1)" aria-label="Học viên tiếp theo">
+            <span class="material-icons-round">chevron_right</span>
+        </button>
     </div>
 
     <div id="monthlyReportModal" class="modal-overlay hidden">
@@ -443,7 +464,8 @@
         // ============================================================
         const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev';
         const GROUP = new URLSearchParams(window.location.search).get('group')?.toLowerCase() || 'man';
-        const DASHBOARD_CODE = sessionStorage.getItem('giaoly_dashboard_code') || '';
+        const STATUS_FILTER_STORAGE_KEY = `giaoly_status_filter:${GROUP}`;
+        const DASHBOARD_CODE = localStorage.getItem('giaoly_dashboard_code') || '';
 
         if (!DASHBOARD_CODE) window.location.replace('index.html');
 
@@ -556,6 +578,42 @@
                 .toLowerCase();
         }
 
+        function getStatusFilterInputs() {
+            return [...document.querySelectorAll('#statusFilter input[type="checkbox"]')];
+        }
+
+        function restoreStatusFilter() {
+            const saved = JSON.parse(localStorage.getItem(STATUS_FILTER_STORAGE_KEY) || 'null');
+            const inputs = getStatusFilterInputs();
+            const individualInputs = inputs.filter(input => input.value !== 'all');
+            if (!Array.isArray(saved) || !saved.length) return;
+            individualInputs.forEach(input => { input.checked = saved.includes(input.value); });
+            const allInput = inputs.find(input => input.value === 'all');
+            allInput.checked = individualInputs.every(input => input.checked);
+        }
+
+        function onStatusFilterChanged(changedInput) {
+            const inputs = getStatusFilterInputs();
+            const allInput = inputs.find(input => input.value === 'all');
+            const individualInputs = inputs.filter(input => input.value !== 'all');
+            if (changedInput.value === 'all') {
+                individualInputs.forEach(input => { input.checked = allInput.checked; });
+            } else {
+                allInput.checked = individualInputs.every(input => input.checked);
+            }
+            localStorage.setItem(STATUS_FILTER_STORAGE_KEY, JSON.stringify(individualInputs.filter(input => input.checked).map(input => input.value)));
+            filterStudents();
+        }
+
+        function selectedStatuses() {
+            const inputs = getStatusFilterInputs();
+            if (inputs.find(input => input.value === 'all')?.checked) return null;
+            const selected = inputs
+                .filter(input => input.value !== 'all' && input.checked)
+                .map(input => input.value);
+            return new Set(selected);
+        }
+
         function animateCountUp(element, target) {
             let current = 0;
             const duration = 800;
@@ -597,6 +655,7 @@
         // ============================================================
         async function loadStudents() {
             try {
+                restoreStatusFilter();
                 const res = await fetch(api('/student-summary'));
 
                 const contentType = res.headers.get('content-type');
@@ -843,6 +902,8 @@
             const condition =
                 parseCondition(conditionText);
 
+            const statusFilter = selectedStatuses();
+
             const filtered = allStudents.filter(student => {
 
                 const matchKeyword =
@@ -852,6 +913,9 @@
                 const matchClass =
                     !classFilter ||
                     student.className === classFilter;
+
+                const studentStatus = String(student.status || 'đang học').trim().toLowerCase();
+                const matchStatus = !statusFilter || statusFilter.has(studentStatus);
 
                 let matchCondition = true;
 
@@ -894,6 +958,7 @@
                 return (
                     matchKeyword &&
                     matchClass &&
+                    matchStatus &&
                     matchCondition
                 );
             });
@@ -1011,6 +1076,25 @@
         // MODAL: CHI TIẾT HỌC SINH
         // ============================================================
         let studentStatusChanged = false;
+        let currentStudentId = '';
+
+        function updateStudentNavigation() {
+            const list = currentTableData.length ? currentTableData : allStudents;
+            const currentIndex = list.findIndex(student => String(student.studentId) === String(currentStudentId));
+            const prev = document.getElementById('studentPrevButton');
+            const next = document.getElementById('studentNextButton');
+            prev.disabled = currentIndex <= 0;
+            next.disabled = currentIndex < 0 || currentIndex >= list.length - 1;
+            prev.title = currentIndex > 0 ? `Xem ${list[currentIndex - 1].name}` : 'Đây là học viên đầu tiên';
+            next.title = currentIndex >= 0 && currentIndex < list.length - 1 ? `Xem ${list[currentIndex + 1].name}` : 'Đây là học viên cuối cùng';
+        }
+
+        function navigateStudent(direction) {
+            const list = currentTableData.length ? currentTableData : allStudents;
+            const currentIndex = list.findIndex(student => String(student.studentId) === String(currentStudentId));
+            const nextStudent = list[currentIndex + direction];
+            if (nextStudent) openStudent(nextStudent.studentId);
+        }
 
         function refreshStudentTableStatus() {
             const tableWrapper = document.querySelector('.table-wrapper');
@@ -1041,6 +1125,8 @@
 
         async function openStudent(studentId) {
             document.getElementById("studentModal").classList.remove("hidden");
+            currentStudentId = String(studentId);
+            updateStudentNavigation();
 
             const result = document.getElementById("modalResult");
             result.innerHTML = `<div class="state-box">Đang tải...</div>`;
