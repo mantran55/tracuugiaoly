@@ -55,7 +55,27 @@ function getGroup(req) {
     error.status = 400;
     throw error;
   }
+  if (!req.dashboardAuthorized && !isDashboardCodeValid(req.get("x-dashboard-code"), group)) {
+    const error = new Error("Phiên đăng nhập Dashboard không hợp lệ hoặc đã hết hạn");
+    error.status = 401;
+    throw error;
+  }
   return group;
+}
+
+function getDashboardCodes() {
+  try {
+    const codes = JSON.parse(String(process.env.DASHBOARD_CODES || "{}"));
+    return codes && typeof codes === "object" ? codes : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function isDashboardCodeValid(code, group) {
+  const enteredCode = String(code || "").trim();
+  const expectedGroup = getDashboardCodes()[enteredCode];
+  return Boolean(enteredCode && expectedGroup && String(expectedGroup).toLowerCase() === group);
 }
 
 function getState(group) {
@@ -421,6 +441,16 @@ async function getCCAMSData(phone, studentId) {
   return { totalMass, catechism, adoration, attendance };
 }
 
+// Mã đăng nhập Dashboard được lưu trong Cloudflare Secret DASHBOARD_CODES.
+app.post("/auth/dashboard", (req, res) => {
+  const code = String(req.body?.code || "").trim();
+  const group = String(getDashboardCodes()[code] || "").trim().toLowerCase();
+  if (!SHEET_GROUPS[group]) {
+    return res.status(401).json({ success: false, error: "Mã đăng nhập không đúng" });
+  }
+  return res.json({ success: true, group });
+});
+
 app.post("/import-attendance-range", async (req, res) => {
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -744,6 +774,7 @@ app.post("/scheduled-import", async (req, res) => {
       return res.status(401).json({ success: false, error: "Không có quyền chạy điểm danh tự động" });
     }
 
+    req.dashboardAuthorized = true;
     const group = getGroup(req);
     const date = String(req.body.date || "").trim();
     const classId = String(req.body.classId || "").trim();

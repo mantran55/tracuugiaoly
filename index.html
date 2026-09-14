@@ -354,12 +354,7 @@
         }
 
         const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev';
-        const LAST_DASHBOARD_CODE_KEY = 'giaoly_last_dashboard_code';
-
-        const savedDashboardCode = localStorage.getItem(LAST_DASHBOARD_CODE_KEY);
-        if (savedDashboardCode) {
-            document.getElementById('studentId').value = savedDashboardCode;
-        }
+        const DASHBOARD_CODE_KEY = 'giaoly_dashboard_code';
 
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -409,16 +404,21 @@
                 showToast('Vui lòng nhập mã học viên');
                 return;
             }
-            const dashboardGroups = {
-                GLVBH2026_MAN: 'man',
-                GLVBH2026_THAO: 'thao',
-                GLVBH2026_TRINH: 'trinh',
-            };
-
             const dashboardCode = studentId.toUpperCase();
-            if (dashboardGroups[dashboardCode]) {
-                localStorage.setItem(LAST_DASHBOARD_CODE_KEY, dashboardCode);
-                await openDashboardWhenReady(dashboardGroups[dashboardCode]);
+            if (dashboardCode.startsWith('GLVBH2026_')) {
+                try {
+                    const authResponse = await fetch(`${API_URL}/auth/dashboard`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: dashboardCode })
+                    });
+                    const auth = await authResponse.json();
+                    if (!authResponse.ok || !auth.success) throw new Error(auth.error || 'Mã đăng nhập không đúng');
+                    sessionStorage.setItem(DASHBOARD_CODE_KEY, dashboardCode);
+                    await openDashboardWhenReady(auth.group);
+                } catch (error) {
+                    showToast(error.message || 'Mã đăng nhập không đúng');
+                }
                 return;
             }
 

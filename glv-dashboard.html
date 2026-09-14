@@ -443,6 +443,19 @@
         // ============================================================
         const API_URL = 'https://tracuugiaoly.mantrandinhminh.workers.dev';
         const GROUP = new URLSearchParams(window.location.search).get('group')?.toLowerCase() || 'man';
+        const DASHBOARD_CODE = sessionStorage.getItem('giaoly_dashboard_code') || '';
+
+        if (!DASHBOARD_CODE) window.location.replace('index.html');
+
+        // Gắn mã phiên vào mọi yêu cầu API; mã chỉ nằm trong sessionStorage của tab này.
+        const dashboardFetch = window.fetch.bind(window);
+        window.fetch = (input, init = {}) => {
+            const url = typeof input === 'string' ? input : input?.url || '';
+            if (!url.startsWith(API_URL)) return dashboardFetch(input, init);
+            const headers = new Headers(init.headers || (typeof input === 'object' ? input.headers : undefined));
+            headers.set('X-Dashboard-Code', DASHBOARD_CODE);
+            return dashboardFetch(input, { ...init, headers });
+        };
 
         function api(path) {
             const separator = path.includes('?') ? '&' : '?';
