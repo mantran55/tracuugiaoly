@@ -13,8 +13,16 @@ function createApp() {
   app.use = () => app;
   app.listen = () => { throw new Error("Use `npm run dev` to run the Worker."); };
 
-  app.fetch = async request => {
+  app.fetch = async (request, env = {}) => {
     const url = new URL(request.url);
+    // Chỉ cache hồ sơ học viên thành công. Các API nhập điểm danh, tình trạng
+    // và đơn phép luôn đi thẳng tới nguồn dữ liệu để không ghi/lấy dữ liệu cũ.
+    const isStudentLookup = request.method === "GET" && /^\/student\/[^/]+$/.test(url.pathname);
+    const edgeCache = isStudentLookup ? globalThis.caches?.default : null;
+    if (edgeCache) {
+      const cached = await edgeCache.match(request);
+      if (cached) return withCacheHeader(cached, "HIT");
+    }
     const match = routes.find(route => {
       if (route.method !== request.method) return false;
       const routeParts = route.pattern.split("/").filter(Boolean);
@@ -51,15 +59,33 @@ function createApp() {
         params,
         body,
         headers: request.headers,
+        env,
         get(name) { return request.headers.get(name); }
       }, res);
-      return response || json({ success: false, error: "Route did not return a response" }, 500);
+      const finalResponse = response || json({ success: false, error: "Route did not return a response" }, 500);
+      if (edgeCache && finalResponse.status === 200) {
+        let data = null;
+        try { data = await finalResponse.clone().json(); } catch (_) { /* Không cache response không phải JSON. */ }
+        if (data?.success === true) {
+          const cacheable = withCacheHeader(finalResponse, "MISS");
+          await edgeCache.put(request, cacheable.clone());
+          return cacheable;
+        }
+      }
+      return finalResponse;
     } catch (error) {
       console.error(error);
       return json({ success: false, error: error.message || "Internal server error" }, error.status || 500);
     }
   };
   return app;
+}
+
+function withCacheHeader(response, state) {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "public, max-age=300");
+  headers.set("x-student-cache", state);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 function corsHeaders(headers = {}) {

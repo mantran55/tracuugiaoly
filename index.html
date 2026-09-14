@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="favico.png">
-    <link rel="stylesheet" href="styles.css?v=20260913-qr3">
+    <link rel="stylesheet" href="styles.css?v=20260914-qr">
 </head>
 
 <body class="index-page">
@@ -96,6 +96,10 @@
                     <div id="qrScannerReader"></div>
                     <div class="qr-scan-guide"></div>
                 </div>
+                <label class="qr-photo-button" for="qrScannerFile">
+                    <span class="material-icons-round">photo_camera</span> Chụp ảnh mã QR
+                </label>
+                <input id="qrScannerFile" type="file" accept="image/*" capture="environment" hidden onchange="scanQrFromFile(this.files[0])">
                 <p class="qr-scanner-note">Sau khi nhận diện mã, hệ thống sẽ tự mở hồ sơ học viên.</p>
             </div>
         </div>
@@ -109,10 +113,11 @@
 
     <script>
 
-        let qrScannerStream = null;
-        let qrScanTimer = null;
-        let html5QrScanner = null;
-        let qrLibraryPromise = null;
+        const QR_LIB_URLS = [
+            'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+            'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'
+        ];
+        let qrScannerStream = null, qrScanTimer = null, html5QrScanner = null, qrLibraryPromise = null;
 
         function getStudentIdFromQr(value) {
             const text = String(value || '').trim();
@@ -123,17 +128,61 @@
             return pathMatch?.[1] || idMatch?.[1] || '';
         }
 
+        function isInAppBrowser() {
+            return /FBAN|FBAV|FB_IAB|Instagram|Zalo|Line\/|MicroMessenger/i.test(navigator.userAgent);
+        }
+
         function loadQrLibrary() {
             if (window.Html5Qrcode) return Promise.resolve();
             if (qrLibraryPromise) return qrLibraryPromise;
-            qrLibraryPromise = new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
-                script.onload = resolve;
-                script.onerror = () => reject(new Error('Không tải được bộ quét QR'));
-                document.head.appendChild(script);
-            });
+            qrLibraryPromise = QR_LIB_URLS.reduce(
+                (chain, url) => chain.catch(() => new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('CDN lỗi: ' + url));
+                    document.head.appendChild(script);
+                })),
+                Promise.reject()
+            ).catch(() => { throw new Error('Không tải được bộ quét QR'); });
             return qrLibraryPromise;
+        }
+
+        async function hasNativeQrDetector() {
+            if (!('BarcodeDetector' in window)) return false;
+            try {
+                const formats = await BarcodeDetector.getSupportedFormats();
+                return formats.includes('qr_code');
+            } catch { return false; }
+        }
+
+        function cameraErrorMessage(error) {
+            const name = error?.name || '';
+            if (name === 'NotAllowedError' || name === 'SecurityError') return 'Trang web chưa được cấp quyền camera. Vào Cài đặt trình duyệt → Camera → Cho phép, rồi thử lại.';
+            if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'Không tìm thấy camera sau trên thiết bị này. Bạn có thể chụp ảnh mã QR hoặc nhập mã trên thẻ.';
+            if (name === 'NotReadableError') return 'Camera đang được ứng dụng khác sử dụng. Hãy đóng các app đang dùng camera rồi thử lại.';
+            return 'Không mở được camera. Bạn có thể chụp ảnh mã QR hoặc nhập mã trên thẻ.';
+        }
+
+        async function startNativeQrScanner() {
+            const video = document.getElementById('qrScannerVideo');
+            const hint = document.getElementById('qrScannerHint');
+            qrScannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+            video.classList.remove('hidden');
+            video.srcObject = qrScannerStream;
+            if (video.readyState < 1) await new Promise(resolve => video.addEventListener('loadedmetadata', resolve, { once: true }));
+            await video.play();
+            const detector = new BarcodeDetector({ formats: ['qr_code'] });
+            hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
+            const scan = async () => {
+                if (!qrScannerStream) return;
+                try {
+                    const codes = await detector.detect(video);
+                    if (codes[0]?.rawValue) return handleQrResult(codes[0].rawValue);
+                } catch (_) { /* Camera đang lấy nét. */ }
+                qrScanTimer = window.setTimeout(scan, 180);
+            };
+            scan();
         }
 
         async function startFallbackQrScanner() {
@@ -146,20 +195,15 @@
             video.srcObject = null;
             video.classList.add('hidden');
             reader.innerHTML = '';
-            try {
-                await loadQrLibrary();
-                html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
-                await html5QrScanner.start(
-                    'environment',
-                    { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
-                    decodedText => handleQrResult(decodedText),
-                    () => {}
-                );
-                hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
-            } catch (error) {
-                hint.textContent = 'Không thể mở camera. Hãy cấp quyền camera và mở web bằng Chrome hoặc Safari bản mới.';
-                console.error('QR fallback scanner:', error);
-            }
+            await loadQrLibrary();
+            html5QrScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
+            await html5QrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
+                decodedText => handleQrResult(decodedText),
+                () => {}
+            );
+            hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
         }
 
         async function handleQrResult(value) {
@@ -173,36 +217,41 @@
             document.getElementById('searchForm').requestSubmit();
         }
 
+        async function scanQrFromFile(file) {
+            const hint = document.getElementById('qrScannerHint');
+            if (!file) return;
+            hint.textContent = 'Đang đọc mã QR từ ảnh…';
+            try {
+                if (html5QrScanner) { try { await html5QrScanner.stop(); } catch (_) {} html5QrScanner = null; }
+                if (qrScannerStream) { qrScannerStream.getTracks().forEach(track => track.stop()); qrScannerStream = null; }
+                document.getElementById('qrScannerReader').innerHTML = '';
+                await loadQrLibrary();
+                const fileScanner = new Html5Qrcode('qrScannerReader', { verbose: false });
+                const text = await fileScanner.scanFile(file, false);
+                try { await fileScanner.clear(); } catch (_) {}
+                await handleQrResult(text);
+            } catch (error) {
+                console.error('QR file scan:', error);
+                hint.textContent = 'Không đọc được mã QR trong ảnh. Hãy chụp lại gần và rõ hơn, hoặc nhập mã trên thẻ.';
+            }
+        }
+
         async function openQrScanner() {
             const modal = document.getElementById('qrScannerModal');
             const hint = document.getElementById('qrScannerHint');
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
-            hint.textContent = 'Đang mở camera…';
+            if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+                hint.textContent = 'Thiết bị/trình duyệt này không cho phép mở camera (web cần chạy qua HTTPS). Bạn có thể chụp ảnh mã QR hoặc nhập mã trên thẻ.';
+                return;
+            }
+            if (isInAppBrowser()) hint.textContent = 'Bạn đang mở link trong Zalo/Facebook. Hãy bấm “Mở bằng Safari/Chrome” để quét được, hoặc chụp ảnh mã QR.';
+            else hint.textContent = 'Đang mở camera…';
             try {
-                const video = document.getElementById('qrScannerVideo');
-                qrScannerStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' } }, audio: false
-                });
-                video.srcObject = qrScannerStream;
-                await video.play();
-                if ('BarcodeDetector' in window) {
-                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-                    hint.textContent = 'Đưa mã QR trên thẻ vào khung hình.';
-                    const scan = async () => {
-                        if (!qrScannerStream) return;
-                        try {
-                            const codes = await detector.detect(video);
-                            if (codes[0]?.rawValue) return handleQrResult(codes[0].rawValue);
-                        } catch (_) { /* Camera đang lấy nét, tiếp tục quét. */ }
-                        qrScanTimer = window.setTimeout(scan, 180);
-                    };
-                    scan();
-                    return;
-                }
-                await startFallbackQrScanner();
+                if (await hasNativeQrDetector()) await startNativeQrScanner();
+                else await startFallbackQrScanner();
             } catch (error) {
-                hint.textContent = 'Không thể mở camera. Hãy cấp quyền camera rồi thử lại, hoặc nhập mã trên thẻ.';
+                hint.textContent = cameraErrorMessage(error);
                 console.error('QR scanner:', error);
             }
         }

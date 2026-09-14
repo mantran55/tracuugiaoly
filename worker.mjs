@@ -17,6 +17,6 @@ export default {
     }
     Object.assign(process.env, env);
     const app = await getApp();
-    return app.fetch(request);
+    return app.fetch(request, env);
   }
 };

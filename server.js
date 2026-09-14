@@ -3,6 +3,7 @@ const SCORE_SHEET = "Điểm";
 const STATUS_SHEET = "Tình Trạng";
 const express = require("./worker-express");
 const { createSheetsClient } = require("./services/google-sheets");
+const STUDENT_AVATAR_LINKS = require("./student-avatar-links.json");
 const {
   getCCAMS,
   getCCAMSStudentProfile,
@@ -59,6 +60,15 @@ function getGroup(req) {
 
 function getState(group) {
   return sheetStates[group];
+}
+
+// Nếu có link riêng trong student-avatar-links.json thì ưu tiên link đó.
+// Mã không có trong file vẫn dùng kho ảnh CCAMS như trước.
+function getStudentAvatar(studentId) {
+  const id = String(studentId || "").trim();
+  const customUrl = String(STUDENT_AVATAR_LINKS[id] || "").trim();
+  if (/^https:\/\//i.test(customUrl)) return customUrl;
+  return `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(id)}.jpg`;
 }
 
 
@@ -548,29 +558,6 @@ app.get("/student/:id", async (req, res) => {
     const studentId = req.params.id.toString().trim();
     const requestedGroup = String(req.query.group || "").trim().toLowerCase();
     const requestedGroupValue = requestedGroup ? getGroup(req) : "";
-    const ccamsStudent = await getCCAMSStudentAttendance(studentId);
-    if (!ccamsStudent) {
-      return res.json({ success: false, message: "Không tìm thấy học viên trên CCAMS" });
-    }
-
-    // Ở Dashboard GLV, chỉ mở hồ sơ học viên thuộc lớp GLV phụ trách.
-    // Danh sách Sheet không còn là điều kiện để xem hồ sơ: em mới/chưa có
-    // trong Sheet vẫn xem được dữ liệu CCAMS, nhưng không lộ điểm học tập.
-    if (requestedGroupValue) {
-      const ccamsClasses = await getCCAMSClasses();
-      const allowedIds = CCAMS_CLASS_IDS_BY_GROUP[requestedGroupValue] || [];
-      const managedClassNames = new Set(ccamsClasses
-        .filter(item => allowedIds.includes(item.id))
-        .map(item => String(item.name || "").replace(/\s+/g, " ").trim().toLowerCase()));
-      const currentClass = String(ccamsStudent.className || "").replace(/\s+/g, " ").trim().toLowerCase();
-      if (!managedClassNames.has(currentClass)) {
-        return res.status(403).json({
-          success: false,
-          message: "Học viên không thuộc lớp bạn đang quản lý"
-        });
-      }
-    }
-
     const groups = requestedGroupValue ? [requestedGroupValue] : Object.keys(SHEET_GROUPS);
 
     let group = null;
@@ -588,14 +575,46 @@ app.get("/student/:id", async (req, res) => {
       }
     }
 
+    // CCAMS đang chuyển sang API/giao diện mới. Vẫn ưu tiên dữ liệu CCAMS khi
+    // đọc được, nhưng học viên đã có trong Sheet không bị báo "không tìm thấy"
+    // chỉ vì trang CCAMS cũ tạm thời không còn trả HTML như trước.
+    let ccamsStudent = null;
+    try {
+      ccamsStudent = await getCCAMSStudentAttendance(studentId);
+    } catch (error) {
+      console.warn("Không đọc được hồ sơ CCAMS, dùng Sheet dự phòng:", error.message);
+    }
+
+    if (!ccamsStudent && !studentRow) {
+      return res.json({ success: false, message: "Không tìm thấy học viên" });
+    }
+
+    // Với Dashboard GLV: nếu CCAMS đọc được thì xác nhận đúng lớp CCAMS;
+    // nếu CCAMS đang chuyển hệ thống thì việc mã nằm trong Sheet của chính
+    // nhóm đang đăng nhập đã là bằng chứng em thuộc lớp quản lý.
+    if (requestedGroupValue && ccamsStudent && !studentRow) {
+      const ccamsClasses = await getCCAMSClasses();
+      const allowedIds = CCAMS_CLASS_IDS_BY_GROUP[requestedGroupValue] || [];
+      const managedClassNames = new Set(ccamsClasses
+        .filter(item => allowedIds.includes(item.id))
+        .map(item => String(item.name || "").replace(/\s+/g, " ").trim().toLowerCase()));
+      const currentClass = String(ccamsStudent.className || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (!managedClassNames.has(currentClass)) {
+        return res.status(403).json({ success: false, message: "Học viên không thuộc lớp bạn đang quản lý" });
+      }
+    }
+
     const score = studentRow ? (state.scoreMap[studentId] || {}) : {};
-    const ccamsProfile = await getCCAMSStudentProfile(studentId);
+    let ccamsProfile = {};
+    try { ccamsProfile = await getCCAMSStudentProfile(studentId); } catch (_) { /* Không chặn tra cứu từ Sheet. */ }
+    const sheetAttendance = studentRow ? getStudentSheetAttendance(state, studentRow) : { attendance: [], adoration: 0, confession: 0 };
+    const source = ccamsStudent || {};
 
     return res.json({
       success: true,
-      studentId: ccamsStudent.studentId || studentId,
-      name: ccamsStudent.name || studentRow?.[2] || "",
-      className: ccamsStudent.className || studentRow?.[3] || "",
+      studentId: source.studentId || studentId,
+      name: source.name || studentRow?.[2] || "",
+      className: source.className || studentRow?.[3] || "",
       // Em thuộc lớp GLV phụ trách nhưng chưa được thêm vào Sheet được xem là
       // đang học mặc định; trạng thái thực tế vẫn ưu tiên dữ liệu Sheet.
       status: studentRow ? (state.statusMap[studentId] || "đang học") : "đang học",
@@ -605,17 +624,19 @@ app.get("/student/:id", async (req, res) => {
       // Điểm học tập chỉ nằm trong Sheet của lớp đó. Em cùng lớp nhưng chưa
       // có dòng Sheet vẫn xem được hồ sơ/điểm danh CCAMS, không hiện điểm.
       showScores: Boolean(studentRow),
-      dateOfBirth: ccamsStudent.dateOfBirth || ccamsProfile.dateOfBirth || "",
-      fatherName: ccamsStudent.fatherName || ccamsProfile.fatherName || "",
-      motherName: ccamsStudent.motherName || ccamsProfile.motherName || "",
-      phones: ccamsProfile.phones || [],
-      avatar: `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(studentId)}.jpg`,
-      totalMass: ccamsStudent.totalMass,
-      catechism: ccamsStudent.catechism,
-      adoration: ccamsStudent.adoration,
-      confession: ccamsStudent.confession,
+      dateOfBirth: source.dateOfBirth || ccamsProfile.dateOfBirth || "",
+      fatherName: source.fatherName || ccamsProfile.fatherName || "",
+      motherName: source.motherName || ccamsProfile.motherName || "",
+      phones: (ccamsProfile.phones?.length
+        ? ccamsProfile.phones
+        : String(studentRow?.[4] || "").match(/0\d{8,10}/g) || []),
+      avatar: getStudentAvatar(studentId),
+      totalMass: source.totalMass ?? Number(studentRow?.[5] || 0),
+      catechism: source.catechism ?? Number(studentRow?.[8] || 0),
+      adoration: source.adoration ?? sheetAttendance.adoration,
+      confession: source.confession ?? sheetAttendance.confession,
       scores: score,
-      attendance: ccamsStudent.attendance
+      attendance: source.attendance || sheetAttendance.attendance
     });
 
   } catch (err) {
@@ -1094,7 +1115,7 @@ app.get("/student-summary", async (req, res) => {
           // vì scoreMap/leaveMap đã có sẵn trong cache khi loadSheetData chạy.
           avgScore: averageScore(score),
           hasExcusedLeave: hasExcusedLeave(state.leaveMap[studentId]),
-          avatar: `https://ttxl.s3-hn-2.cloud.cmctelecom.vn/ccams/gxbienhoa/hocvien/${encodeURIComponent(studentId)}.jpg`
+          avatar: getStudentAvatar(studentId)
         };
       });
     res.json({

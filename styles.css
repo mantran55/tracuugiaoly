@@ -49,6 +49,8 @@ body {
 .qr-camera-frame video.hidden { display: none; }
 #qrScannerReader { position: absolute; inset: 0; }
 #qrScannerReader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qr-photo-button { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; min-height: 44px; border: 1px solid #bfdbfe; border-radius: 12px; background: #eff6ff; color: #1d4ed8; font-size: 14px; font-weight: 700; cursor: pointer; }
+.qr-photo-button:hover { background: #dbeafe; }
 .qr-scan-guide { position: absolute; inset: 17%; border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 999px rgba(15, 23, 42, .16); pointer-events: none; }
 .qr-scan-guide::after { content: ''; position: absolute; left: 8%; right: 8%; top: 50%; height: 2px; background: #60a5fa; box-shadow: 0 0 12px #60a5fa; animation: qrScanLine 1.7s ease-in-out infinite alternate; }
 @keyframes qrScanLine { from { transform: translateY(-62px); } to { transform: translateY(62px); } }
