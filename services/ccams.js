@@ -2,6 +2,9 @@ const cache = {};
 const studentProfileCache = {};
 const studentAttendanceCache = {};
 const CACHE_TIME = 3 * 60 * 1000;
+const CCAMS_API_BASE = "https://ccams-socket.thongtinxuanloc.com/api/v1";
+const CCAMS_PARISH_CODE = "gxbienhoa";
+const CCAMS_GLV_PHONE = "0857675733";
 const text = html => String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 const rows = html => [...String(html || "").matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(match => [...match[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(cell => ({ html: cell[1], text: text(cell[1]) })));
 const url = (path, params) => `${path}?${new URLSearchParams(params)}`;
@@ -10,6 +13,24 @@ async function load(path, params) {
   const response = await fetch(url(path, params), { headers: { "user-agent": "Mozilla/5.0" } });
   if (!response.ok) throw new Error(`CCAMS error: ${response.status}`);
   return response.text();
+}
+
+async function loadApi(path, params = {}) {
+  const response = await fetch(url(`${CCAMS_API_BASE}${path}`, params), {
+    headers: { accept: "application/json", "user-agent": "Mozilla/5.0" }
+  });
+  if (!response.ok) throw new Error(`CCAMS API error: ${response.status}`);
+  return response.json();
+}
+
+async function loadAllApiPages(path, params = {}) {
+  const first = await loadApi(path, { ...params, page: 1 });
+  const pages = [first];
+  const lastPage = Number(first?.last_page || first?.rows?.last_page || 1);
+  for (let page = 2; page <= Math.min(lastPage, 100); page++) {
+    pages.push(await loadApi(path, { ...params, page }));
+  }
+  return pages;
 }
 
 async function getCCAMS(phone) {
@@ -35,12 +56,14 @@ async function getCCAMSStudentProfile(studentId) {
   if (!id) return {};
   if (studentProfileCache[id] && now - studentProfileCache[id].timestamp < CACHE_TIME) return studentProfileCache[id].data;
   try {
-    const html = await load("https://ccams.thongtinxuanloc.com/search", { phone: "0857675733", search: id });
-    let profile = {};
-    for (const cells of rows(html)) if (cells[1]?.text === id) {
-      const phones = (cells[8]?.text.replace(/\D/g, "").match(/0\d{9}/g) || []).filter((phone, index, list) => list.indexOf(phone) === index);
-      profile = { dateOfBirth: cells[3]?.text || "", fatherName: cells[9]?.text || "", motherName: cells[10]?.text || "", phones };
-    }
+    const data = await loadApi(`/public/lookup/hocvien/${CCAMS_PARISH_CODE}/${encodeURIComponent(id)}`);
+    const student = data?.hocvien || {};
+    const profile = {
+      dateOfBirth: student.NGAYSINH || "",
+      fatherName: student.HOTENPHCHA || "",
+      motherName: student.HOTENPHME || "",
+      phones: []
+    };
     studentProfileCache[id] = { timestamp: now, data: profile }; return profile;
   } catch (error) { console.error("CCAMS student profile error:", error.message); return {}; }
 }
@@ -95,8 +118,8 @@ function getPageNumbers(html) {
   return [...pages].sort((a, b) => a - b);
 }
 
-// Đọc trực tiếp trang phụ huynh CCAMS. Lịch sử có thể phân trang, vì vậy
-// tải đủ các trang được website công bố và khử bản ghi trùng do giao diện đáp ứng.
+// Đọc đúng như khi mở link CCAMS: không truyền nienhoc để CCAMS tự chọn
+// niên khóa hiện tại. Lịch sử vẫn đọc đủ các trang của niên khóa đó.
 async function getCCAMSStudentAttendance(studentId) {
   const id = String(studentId || "").trim();
   const now = Date.now();
@@ -105,30 +128,36 @@ async function getCCAMSStudentAttendance(studentId) {
     return studentAttendanceCache[id].data;
   }
 
-  const base = "https://ccams.thongtinxuanloc.com/gxbienhoa/" + encodeURIComponent(id);
-  const params = { mahocvien: id, nienhoc: "all", loai: "all" };
-  const firstPage = await load(base, params);
-  const profile = parseStudentProfile(firstPage, id);
-  if (!profile.name) return null;
-
-  const pages = getPageNumbers(firstPage);
-  const htmlPages = [firstPage];
-  for (const page of pages) {
-    if (page === 1) continue;
-    htmlPages.push(await load(base, { ...params, page }));
-  }
-
-  const seen = new Set();
-  const attendance = [];
-  htmlPages.flatMap(parseAttendanceRows).forEach(item => {
-    // CCAMS đôi khi xuất cùng một lần điểm danh hai lần (bản mobile/desktop),
-    // khác nhau duy nhất ở tên người điểm danh. Không lấy marker làm khóa.
-    const key = [item.date, item.mass, item.catechism, item.adoration, item.confession, item.other, item.schoolYear, item.className, item.note].join("|");
-    if (!seen.has(key)) {
-      seen.add(key);
-      attendance.push(item);
+  const detail = await loadApi(`/public/lookup/hocvien/${CCAMS_PARISH_CODE}/${encodeURIComponent(id)}`);
+  const student = detail?.hocvien;
+  if (!student) return null;
+  const attendancePages = await loadAllApiPages(
+    `/public/lookup/hocvien/${CCAMS_PARISH_CODE}/${encodeURIComponent(id)}/diemdanh`,
+    { per_page: 100 }
+  );
+  const items = attendancePages.flatMap(page => page?.data || []);
+  const grouped = new Map();
+  items.forEach(item => {
+    const date = String(item.NGAYDIEMDANH || "").slice(0, 10);
+    if (!date) return;
+    const group = grouped.get(date) || {
+      date: date.split("-").reverse().join("/"), mass: false, catechism: false,
+      adoration: false, confession: false, other: false,
+      schoolYear: item?.lophoc?.TENNIENHOC || "", className: item?.lophoc?.TENLOPHOC || "",
+      marker: item.nguoidiemdanh || "", note: item.GHICHU || ""
+    };
+    // API mới: LOAI 1=Lễ, 2=Giáo lý, 3=Chầu, 4=Xưng tội, 5=Khác.
+    // Chỉ tính dòng hiện diện; dòng có phép được giữ trong lịch sử nhưng không cộng điểm.
+    if (!item.is_vangcp) {
+      if (Number(item.LOAI) === 1) group.mass = true;
+      if (Number(item.LOAI) === 2) group.catechism = true;
+      if (Number(item.LOAI) === 3) group.adoration = true;
+      if (Number(item.LOAI) === 4) group.confession = true;
+      if (Number(item.LOAI) === 5) group.other = true;
     }
+    grouped.set(date, group);
   });
+  const attendance = [...grouped.values()];
   attendance.sort((a, b) => {
     const date = value => {
       const [day, month, year] = String(value).split("/").map(Number);
@@ -138,11 +167,17 @@ async function getCCAMSStudentAttendance(studentId) {
   });
 
   const data = {
-    ...profile,
+    studentId: student.MAHOCVIEN || id,
+    name: student.hoten || [student.TENTHANH, student.HOCANHAN, student.TENCANHAN].filter(Boolean).join(" "),
+    className: detail?.lop?.TENLOPHOC || "",
+    dateOfBirth: student.NGAYSINH || "",
+    fatherName: student.HOTENPHCHA || "",
+    motherName: student.HOTENPHME || "",
     attendance,
-    totalMass: attendance.filter(item => item.mass).length,
-    catechism: attendance.filter(item => item.catechism).length,
-    adoration: attendance.filter(item => item.adoration).length,
+    // CCAMS tổng kết ba loại đầu; Xưng tội không có thống kê nên đếm lịch sử.
+    totalMass: Number(detail?.total?.thanhle || 0),
+    catechism: Number(detail?.total?.giaoly || 0),
+    adoration: Number(detail?.total?.chau || 0),
     confession: attendance.filter(item => item.confession).length
   };
   studentAttendanceCache[id] = { timestamp: now, data };
@@ -150,16 +185,29 @@ async function getCCAMSStudentAttendance(studentId) {
 }
 
 async function getAttendanceByClass(classId, date) {
-  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733", nienhoc: 4, khoi_lop: classId, loai: "all", search: "", date, to: date });
-  return rows(html).filter(cells => cells.length >= 9 && cells[1].text).map(cells => ({
-    studentId: cells[1].text,
-    mark: [5, 6, 7, 8].map((index, mark) => /check|✓|✔|✅/i.test(`${cells[index].html} ${cells[index].text}`) ? "CGTX"[mark] : "").join("")
-  }));
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(String(date))
+    ? String(date)
+    : String(date).split("/").reverse().join("-");
+  const pages = await loadAllApiPages("/public/lookup/glv/diemdanh", {
+    // Không ép nienhoc: API GLV chọn đúng niên khóa hiện tại như giao diện.
+    phone: CCAMS_GLV_PHONE, khoi_lop: classId, loai: "all", search: "", date: isoDate, to: isoDate, per_page: 300
+  });
+  const marks = new Map();
+  pages.flatMap(page => page?.rows?.data || []).forEach(item => {
+    if (item.is_vangcp || !item.MAHOCVIEN) return;
+    const key = String(item.MAHOCVIEN);
+    const existing = marks.get(key) || "";
+    const symbol = ({ 1: "C", 2: "G", 3: "T", 4: "X" })[Number(item.LOAI)] || "";
+    marks.set(key, existing.includes(symbol) ? existing : `${existing}${symbol}`);
+  });
+  return [...marks].map(([studentId, mark]) => ({ studentId, mark }));
 }
 
 async function getCCAMSClasses() {
-  const html = await load("https://ccams.thongtinxuanloc.com/", { phone: "0857675733", nienhoc: 4 });
-  return [...html.matchAll(/<option\b[^>]*value=["']([^"']+)["'][^>]*>([\s\S]*?)<\/option>/gi)].map(match => ({ id: match[1], name: text(match[2]).replace(/^---\s*/, "") })).filter(item => item.id && item.id !== "all" && !item.id.startsWith("k_"));
+  const data = await loadApi("/public/lookup/glv/meta", { phone: CCAMS_GLV_PHONE });
+  return (data?.filters?.grades || []).flatMap(grade => (grade.classes || []).map(classItem => ({
+    id: `l_${classItem.MALOPHOC}`, name: classItem.TENLOPHOC || ""
+  })));
 }
 
 module.exports = { getCCAMS, getCCAMSStudentProfile, getCCAMSStudentAttendance, getAttendanceByClass, clearCCAMSCache, getCCAMSClasses, cache, rows, text };
