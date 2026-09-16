@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260916-listavatar">
+    <link rel="stylesheet" href="styles.css?v=20260916-mobiletidy">
 </head>
 
 <body class="dashboard-page">
@@ -967,7 +967,15 @@
         }
 
         function renderTable(list) {
-            currentTableData = [...list];
+            // Giữ đúng thứ tự lớp và học viên từ Google Sheet.
+            const classGroups = new Map();
+            list.forEach(student => {
+                const className = String(student.className || 'Chưa xếp lớp').trim() || 'Chưa xếp lớp';
+                if (!classGroups.has(className)) classGroups.set(className, []);
+                classGroups.get(className).push(student);
+            });
+            const orderedList = [...classGroups.values()].flat();
+            currentTableData = orderedList;
             const tbody = document.getElementById('studentTable');
             tbody.innerHTML = '';
 
@@ -984,7 +992,13 @@
                 return;
             }
 
-            list.forEach(student => {
+            classGroups.forEach((studentsInClass, className) => {
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'class-group-row';
+                groupRow.innerHTML = `<td colspan="6"><span class="material-icons-round">school</span><strong>${escapeHtml(className)}</strong><span class="class-group-total">${studentsInClass.length} học viên</span></td>`;
+                tbody.appendChild(groupRow);
+
+                studentsInClass.forEach(student => {
 
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
@@ -1023,14 +1037,14 @@
                 : `<span class="loading-cell"><span class="material-icons-round">autorenew</span></span>`;
 
             tr.innerHTML = `
-                <td>${student.studentId}</td>
+                <td data-label="Mã HS">${student.studentId}</td>
 
-                <td class="student-list-name" style="font-weight:700;text-align:left;">
+                <td class="student-list-name" data-label="Học viên" style="font-weight:700;text-align:left;">
                     <img class="student-list-avatar" src="${escapeHtml(student.avatar || 'ava.png')}" alt="" loading="lazy" onerror="this.src='ava.png'">
-                    <span>${escapeHtml(student.name)}</span>
+                    <span class="student-list-name-text">${escapeHtml(student.name)}<small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
                 </td>
 
-                <td>
+                <td data-label="Tình trạng">
                     ${
                         student.status
                         ? `
@@ -1046,26 +1060,27 @@
                     }
                 </td>
 
-                <td>${student.className}</td>
+                <td data-label="Lớp">${student.className}</td>
 
-                <td>${massHtml}</td>
+                <td data-label="TL">${massHtml}</td>
 
-                <td>${catHtml}</td>
+                <td data-label="GL">${catHtml}</td>
             `;
 
-            tbody.appendChild(tr);
-        });
+                    tbody.appendChild(tr);
+                });
+            });
         }
 
         function showTableLoading() {
             document.querySelectorAll('#studentTable tr').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 5) {
-                    cells[3].innerHTML = `
+                if (cells.length >= 6) {
+                    cells[4].innerHTML = `
                         <span class="loading-cell">
                             <span class="material-icons-round">autorenew</span>
                         </span>`;
-                    cells[4].innerHTML = `
+                    cells[5].innerHTML = `
                         <span class="loading-cell">
                             <span class="material-icons-round">autorenew</span>
                         </span>`;

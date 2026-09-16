@@ -5747,8 +5747,106 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     body.dashboard-page .container { max-width: 1320px; padding-left: 28px; padding-right: 28px; }
 }
 .student-list-name { display: flex; align-items: center; gap: 11px; }
+.student-list-name-text { min-width: 0; }
+.student-list-mobile-meta { display: none; }
 .student-list-avatar { flex: 0 0 auto; width: 38px; height: 38px; border: 2px solid #dbeafe; border-radius: 50%; object-fit: cover; background: #eff6ff; box-shadow: 0 2px 7px rgba(30,64,175,.12); }
+.class-group-row td { padding: 11px 16px !important; background: #eff6ff !important; color: #1e40af; text-align: left !important; border-bottom: 1px solid #bfdbfe !important; font-size: 13px !important; }
+.class-group-row td .material-icons-round { margin-right: 7px; vertical-align: -4px; font-size: 18px; }
+.class-group-total { margin-left: 9px; color: #64748b; font-size: 11px; font-weight: 700; }
 @media screen and (max-width: 600px) {
     .student-list-name { gap: 7px; }
     .student-list-avatar { width: 30px; height: 30px; }
+}
+
+/* Mobile: đổi bảng danh sách lớp thành các thẻ học viên dễ quét mắt. */
+@media screen and (max-width: 600px) {
+    .dashboard-page .student-list-layout .table-card { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+    .dashboard-page .student-list-layout .table-wrapper { max-height: none; overflow: visible; }
+    .dashboard-page .student-list-layout .table-wrapper > table,
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody { display: block; width: 100%; }
+    .dashboard-page .student-list-layout .table-wrapper > table > thead { display: none; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 54px;
+        gap: 7px 10px;
+        margin: 0 0 10px;
+        padding: 12px;
+        border: 1px solid #dbeafe;
+        border-left: 4px solid #2563eb;
+        border-radius: 14px;
+        background: rgba(255,255,255,.96);
+        box-shadow: 0 5px 16px rgba(30,64,175,.07);
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row {
+        display: block;
+        margin: 15px 0 7px;
+        padding: 0;
+        border: 0;
+        border-radius: 10px;
+        box-shadow: none;
+        background: transparent;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td {
+        display: block;
+        padding: 9px 11px !important;
+        border: 1px solid #bfdbfe !important;
+        border-radius: 10px;
+        background: #eff6ff !important;
+        color: #1e40af;
+        font-size: 12px !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td::before { display: none; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.student-warning-row { border-left-color: #dc2626; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td {
+        display: flex;
+        min-width: 0;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #334155;
+        font-size: 11px !important;
+        font-weight: 750;
+        text-align: left !important;
+        white-space: normal !important;
+        align-items: center;
+        gap: 4px;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td::before {
+        content: attr(data-label);
+        display: block;
+        color: #94a3b8;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .35px;
+        text-transform: uppercase;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(1),
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(4) { display: none !important; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        gap: 9px;
+        color: #172554;
+        font-size: 14px !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2)::before { display: none; }
+    .dashboard-page .student-list-avatar { width: 40px; height: 40px; }
+    .dashboard-page .student-list-name-text { display: block; overflow-wrap: anywhere; }
+    .dashboard-page .student-list-mobile-meta { display: block; margin-top: 3px; color: #64748b; font-size: 10px; font-weight: 700; line-height: 1.25; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(3) { grid-column: 1; grid-row: 2; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5),
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6) {
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        padding: 5px 2px !important;
+        border-radius: 10px !important;
+        background: #eff6ff !important;
+        text-align: center !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5) { grid-column: 2; grid-row: 1; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6) { grid-column: 2; grid-row: 2; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5)::before,
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6)::before { color: #2563eb; }
+    .dashboard-page .student-list-layout .check-badge { width: 25px; height: 25px; font-size: 12px; }
 }
