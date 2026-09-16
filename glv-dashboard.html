@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260914-studentnav">
+    <link rel="stylesheet" href="styles.css?v=20260916-listavatar">
 </head>
 
 <body class="dashboard-page">
@@ -1025,8 +1025,9 @@
             tr.innerHTML = `
                 <td>${student.studentId}</td>
 
-                <td style="font-weight:700;text-align:left;">
-                    ${student.name}
+                <td class="student-list-name" style="font-weight:700;text-align:left;">
+                    <img class="student-list-avatar" src="${escapeHtml(student.avatar || 'ava.png')}" alt="" loading="lazy" onerror="this.src='ava.png'">
+                    <span>${escapeHtml(student.name)}</span>
                 </td>
 
                 <td>
