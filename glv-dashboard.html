@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260917-mobile-profiles">
+    <link rel="stylesheet" href="styles.css?v=20260917-mobile-inputs">
 </head>
 
 <body class="dashboard-page">
@@ -1039,12 +1039,14 @@
                 ? `<span class="check-badge yes pop-in">${catVal}</span>`
                 : `<span class="loading-cell"><span class="material-icons-round">autorenew</span></span>`;
 
-            tr.innerHTML = `
+                    const studentName = String(student.name || '').trim();
+                    const mobileStudentName = abbreviateStudentNameForMobile(studentName);
+                    tr.innerHTML = `
                 <td data-label="Mã HS">${student.studentId}</td>
 
                 <td class="student-list-name" data-label="Học viên" style="font-weight:700;text-align:left;">
                     <img class="student-list-avatar" src="${escapeHtml(student.avatar || 'ava.png')}" alt="" loading="lazy" onerror="this.src='ava.png'">
-                    <span class="student-list-name-text">${escapeHtml(student.name)}<small class="student-list-mobile-status ${student.status?.trim().toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${student.status ? escapeHtml(student.status) : 'Chưa cập nhật'}</small><small class="student-list-mobile-scores"><span>TL: <i>${massVal >= 0 ? massVal : '—'}</i></span><b>|</b><span>GL: <i>${catVal >= 0 ? catVal : '—'}</i></span></small><small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
+                    <span class="student-list-name-text"><span class="student-list-name-full">${escapeHtml(studentName)}</span><span class="student-list-name-short" title="${escapeHtml(studentName)}">${escapeHtml(mobileStudentName)}</span><small class="student-list-mobile-status ${student.status?.trim().toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${student.status ? escapeHtml(student.status) : 'Chưa cập nhật'}</small><small class="student-list-mobile-scores"><span>TL: <i>${massVal >= 0 ? massVal : '—'}</i></span><b>|</b><span>GL: <i>${catVal >= 0 ? catVal : '—'}</i></span></small><small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
                 </td>
 
                 <td data-label="Tình trạng">
@@ -2540,6 +2542,14 @@
             return String(value ?? '').replace(/[&<>'"]/g, char => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             })[char]);
+        }
+
+        function abbreviateStudentNameForMobile(name) {
+            const normalized = String(name || '').trim().replace(/\s+/g, ' ');
+            if (normalized.length <= 23) return normalized;
+            const words = normalized.split(' ');
+            if (words.length >= 3) return `${words[0]}…${words.slice(-2).join(' ')}`;
+            return normalized;
         }
 
         async function copyPhone(phone) {
