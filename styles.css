@@ -6051,6 +6051,9 @@ body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-s
         min-width:0 !important;
         max-width:none !important;
         box-sizing:border-box;
+        min-height:52px;
+        padding:0 16px;
+        font-size:15px;
     }
     body.dashboard-page #quickFilterPanel input#filterValue {
         display:block !important;
@@ -6059,6 +6062,8 @@ body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-s
         max-width:none !important;
         box-sizing:border-box;
         margin:12px 16px 16px !important;
-        padding:0 14px;
+        min-height:52px;
+        padding:0 16px;
+        font-size:15px;
     }
 }
