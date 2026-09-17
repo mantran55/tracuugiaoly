@@ -5536,8 +5536,15 @@ button.btn-leave {
 .leave-edit-row input { margin:0; }
 .leave-remove-button { width:42px; height:42px; flex:0 0 42px; border:0; border-radius:10px; background:#fee2e2; color:#dc2626; cursor:pointer; }
 .leave-edit-empty { padding:15px; border:1px dashed #fca5a5; border-radius:10px; color:#991b1b; font-size:13px; text-align:center; }
-.student-leave-box { margin-top:14px; padding:11px 12px; border:1px solid #fde68a; border-radius:11px; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.55; }
-.student-leave-box strong { display:block; margin-bottom:4px; color:#78350f; }
+.student-leaves { display:grid; gap:9px; margin-top:14px; }
+.student-leave-group { padding:11px 12px; border:1px solid; border-radius:11px; font-size:12px; line-height:1.5; }
+.student-leave-group.makeup { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+.student-leave-group.excused { border-color:#fecaca; background:#fff7f7; color:#b91c1c; }
+.student-leave-heading { display:flex; align-items:center; gap:5px; margin-bottom:6px; font-size:12px; font-weight:850; }
+.student-leave-heading .material-icons-round { font-size:16px; }
+.student-leave-entry { padding:6px 8px; border-radius:7px; background:rgba(255,255,255,.72); font-weight:650; }
+.student-leave-entry + .student-leave-entry { margin-top:5px; }
+.student-leave-remaining { margin-top:8px; color:#dc2626; font-size:11px; font-weight:850; }
 .family-info { display:grid; grid-template-columns:110px repeat(2,minmax(0,1fr)); gap:7px; margin-top:14px; }
 .family-info-item { padding:9px 10px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; color:var(--text-secondary); font-size:11px; line-height:1.45; min-width:0; }
 .family-info-item strong { display:flex; align-items:center; gap:4px; margin-bottom:2px; color:#64748b; font-size:9px; text-transform:uppercase; letter-spacing:.03em; }
@@ -5749,6 +5756,8 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
 .student-list-name { display: flex; align-items: center; gap: 11px; }
 .student-list-name-text { min-width: 0; }
 .student-list-mobile-meta { display: none; }
+.student-list-mobile-scores { display: none; }
+.student-list-mobile-status { display: none; }
 .student-list-avatar { flex: 0 0 auto; width: 38px; height: 38px; border: 2px solid #dbeafe; border-radius: 50%; object-fit: cover; background: #eff6ff; box-shadow: 0 2px 7px rgba(30,64,175,.12); }
 .class-group-row td { padding: 11px 16px !important; background: #eff6ff !important; color: #1e40af; text-align: left !important; border-bottom: 1px solid #bfdbfe !important; font-size: 13px !important; }
 .class-group-row td .material-icons-round { margin-right: 7px; vertical-align: -4px; font-size: 18px; }
@@ -5849,4 +5858,183 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
     .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5)::before,
     .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6)::before { color: #2563eb; }
     .dashboard-page .student-list-layout .check-badge { width: 25px; height: 25px; font-size: 12px; }
+}
+
+/* Các đơn phép cũng hiển thị trong hồ sơ trang phụ huynh.
+   Khối dashboard ở trên được @scope theo body.dashboard-page, nên các rule
+   này đặt ngoài scope để index.html không bị mất định dạng. */
+body.index-page .student-leaves { display:grid; gap:9px; margin-top:14px; }
+body.index-page .student-leave-group { padding:11px 12px; border:1px solid; border-radius:11px; font-size:12px; line-height:1.5; }
+body.index-page .student-leave-group.makeup { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+body.index-page .student-leave-group.excused { border-color:#fecaca; background:#fff7f7; color:#b91c1c; }
+body.index-page .student-leave-heading { display:flex; align-items:center; gap:5px; margin-bottom:6px; font-size:12px; font-weight:850; }
+body.index-page .student-leave-heading .material-icons-round { font-size:16px; }
+body.index-page .student-leave-entry { padding:6px 8px; border-radius:7px; background:rgba(255,255,255,.72); font-weight:650; }
+body.index-page .student-leave-entry + .student-leave-entry { margin-top:5px; }
+body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-size:11px; font-weight:850; }
+
+/* Bộ lọc điểm trên điện thoại: lớp và nút lọc luôn ở cùng một hàng,
+   còn bảng lọc là bottom-sheet nên không bị khuất khỏi màn hình. */
+.filter-popup-close { margin-left:auto; width:32px; height:32px; padding:0; border:0; border-radius:9px; background:rgba(255,255,255,.16); color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.filter-popup-close .material-icons-round { color:#fff; font-size:19px; }
+
+@media (max-width:600px) {
+    body.dashboard-page .table-toolbar { grid-template-columns:minmax(0,1fr) minmax(104px,.7fr); }
+    body.dashboard-page .table-toolbar select { grid-column:1; grid-row:2; }
+    body.dashboard-page .table-toolbar .filter-wrapper { grid-column:2; grid-row:2; min-width:0; }
+    body.dashboard-page .table-toolbar .filter-wrapper > button { min-height:46px; width:100%; white-space:nowrap; justify-content:center; }
+}
+
+@media (max-width:768px) {
+    body.dashboard-page .filter-popup {
+        position:fixed;
+        inset:auto 0 0;
+        z-index:20000;
+        width:100%;
+        max-height:min(74dvh,620px);
+        border-radius:20px 20px 0 0;
+        box-shadow:0 -12px 36px rgba(15,23,42,.24);
+        overscroll-behavior:contain;
+        padding-bottom:max(12px, env(safe-area-inset-bottom));
+    }
+    body.dashboard-page .filter-popup::before { display:none; }
+    body.dashboard-page .filter-popup::after { content:''; position:absolute; top:8px; left:50%; width:36px; height:4px; transform:translateX(-50%); border-radius:999px; background:#cbd5e1; }
+    body.dashboard-page .filter-popup-header { padding:22px 18px 16px; border-radius:20px 20px 0 0; }
+    body.dashboard-page .filter-popup.hidden { display:none !important; }
+}
+
+/* Danh sách học viên mobile: hai thẻ gọn trên mỗi hàng. */
+@media screen and (max-width:600px) {
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody {
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:8px;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr {
+        grid-template-columns:minmax(0, 1fr) 36px;
+        gap:5px 6px;
+        min-width:0;
+        min-height:96px;
+        margin:0;
+        padding:8px;
+        border-left-width:3px;
+        border-radius:12px;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row {
+        grid-column:1 / -1;
+        width:100%;
+        margin:8px 0 0;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row:first-child { margin-top:0; }
+    .dashboard-page .student-list-layout .student-list-avatar { width:31px; height:31px; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2) { gap:6px; font-size:11px !important; line-height:1.2; }
+    .dashboard-page .student-list-mobile-meta { display:none; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(3) { align-self:start; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5),
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6) { padding:3px 1px !important; border-radius:8px !important; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td::before { font-size:8px; }
+    .dashboard-page .student-list-layout .check-badge { width:22px; height:22px; font-size:11px; }
+    .dashboard-page .student-list-layout .status-badge { padding:3px 6px; font-size:9px; line-height:1.1; }
+
+    /* Header lớp chỉ có một ô td; không để rule ẩn cột Mã HS ẩn luôn nó. */
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td {
+        display:block !important;
+    }
+
+    /* Tên ở trên, tình trạng ở giữa, TL/GL ở hàng dưới để dễ quét mắt. */
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr {
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:3px 5px;
+        padding:8px;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2) {
+        grid-column:1 / -1;
+        grid-row:1;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(3) {
+        display:none !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(5) {
+        display:none !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(6) {
+        display:none !important;
+    }
+    .dashboard-page .student-list-mobile-status { display:inline-flex; width:max-content; margin-top:2px; padding:3px 6px; border:1px solid; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1.15; }
+    .dashboard-page .student-list-mobile-status.status-active { border-color:#86efac; background:#dcfce7; color:#166534; }
+    .dashboard-page .student-list-mobile-status.status-warning { border-color:#fca5a5; background:#fee2e2; color:#991b1b; }
+    .dashboard-page .student-list-mobile-scores { display:flex; align-items:center; gap:3px; margin-top:3px; color:#64748b; font-size:9px; font-weight:850; letter-spacing:.05px; white-space:nowrap; }
+    .dashboard-page .student-list-mobile-scores span { display:inline-flex; align-items:center; gap:2px; }
+    .dashboard-page .student-list-mobile-scores i { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 4px; border:1px solid #86efac; border-radius:6px; background:#dcfce7; color:#059669; font-style:normal; font-size:10px; font-weight:900; }
+    .dashboard-page .student-list-mobile-scores b { padding:0 2px; color:#94a3b8; }
+}
+
+/* Tinh chỉnh cuối cho lưới 2 học viên: rõ ràng khi nhìn nhanh mà không chật chữ. */
+@media screen and (max-width:600px) {
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody { gap:9px 8px; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row {
+        display:block !important;
+        grid-column:1 / -1 !important;
+        min-height:0 !important;
+        height:auto !important;
+        width:100% !important;
+        margin:5px 0 1px !important;
+        padding:0 !important;
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td {
+        display:flex !important;
+        align-items:center;
+        min-height:35px;
+        padding:8px 10px !important;
+        border-radius:9px;
+        font-size:10px !important;
+        line-height:1.15;
+    }
+    .dashboard-page .student-list-layout .class-group-total { margin-left:6px; font-size:9px; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr:not(.class-group-row) {
+        min-height:0;
+        padding:9px 8px 8px;
+        border-radius:11px;
+        box-shadow:0 3px 10px rgba(30,64,175,.08);
+    }
+    .dashboard-page .student-list-layout .student-list-avatar { width:29px; height:29px; border-width:1.5px; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2) {
+        font-size:10px !important;
+        font-weight:800 !important;
+        letter-spacing:-.08px;
+    }
+    .dashboard-page .student-list-mobile-status { font-size:8px; }
+    .dashboard-page .student-list-layout .status-badge { padding:3px 6px; border-radius:999px; font-size:8px; }
+    .dashboard-page .student-list-mobile-scores { margin-top:1px; font-size:8.5px; gap:2px; }
+    .dashboard-page .student-list-mobile-scores i { min-width:18px; height:17px; border-radius:5px; font-size:9px; }
+}
+
+/* Mobile student directory: mini-profile cards, ưu tiên đọc nhanh thay vì hiệu ứng trang trí. */
+@media screen and (max-width:600px) {
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody { gap:10px 9px; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr:not(.class-group-row) {
+        padding:10px 9px;
+        border:1px solid #e2e8f0;
+        border-left:3px solid #2563eb;
+        border-radius:12px;
+        background:#fff;
+        box-shadow:0 4px 13px rgba(15,23,42,.07);
+    }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.student-warning-row { border-left-color:#ef4444; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr > td:nth-child(2) {
+        display:grid;
+        grid-template-columns:35px minmax(0,1fr);
+        align-items:start;
+        gap:8px;
+        color:#172554;
+    }
+    .dashboard-page .student-list-avatar { width:35px; height:35px; border:2px solid #dbeafe; box-shadow:none; }
+    .dashboard-page .student-list-name-text { display:flex; min-width:0; flex-direction:column; align-items:flex-start; gap:3px; font-size:10.5px; font-weight:850; line-height:1.22; }
+    .dashboard-page .student-list-mobile-status { margin-top:0; padding:3px 7px; font-size:8px; line-height:1; }
+    .dashboard-page .student-list-mobile-scores { margin-top:1px; padding-top:5px; border-top:1px solid #f1f5f9; gap:4px; font-size:8px; color:#64748b; }
+    .dashboard-page .student-list-mobile-scores span { gap:3px; }
+    .dashboard-page .student-list-mobile-scores i { min-width:20px; height:18px; padding:0 4px; border-color:#bbf7d0; border-radius:5px; background:#f0fdf4; color:#059669; font-size:9px; }
+    .dashboard-page .student-list-mobile-scores b { padding:0 1px; color:#cbd5e1; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row { margin:8px 0 0 !important; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td { min-height:34px; padding:8px 10px !important; background:#f8fbff !important; }
 }

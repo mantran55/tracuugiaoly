@@ -824,6 +824,14 @@ app.put("/leave-requests/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: "Không tìm thấy học viên" });
     }
 
+    const excusedCount = leaveItems.filter(item => /^Vắng có phép\b/i.test(item)).length;
+    if (excusedCount > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Mỗi học viên chỉ được tối đa 5 đơn vắng có phép"
+      });
+    }
+
     const statusRow = state.statusRowMap[studentId];
     if (!statusRow) {
       return res.status(404).json({ success: false, message: "Học viên chưa có dữ liệu đơn phép" });
@@ -887,6 +895,14 @@ app.post("/leave-requests", async (req, res) => {
         range: `${STATUS_SHEET}!F${statusRow}`
       });
       const existingLeave = String(current.data.values?.[0]?.[0] || "").trim();
+      const existingExcusedCount = splitLeaveItems(existingLeave)
+        .filter(item => /^Vắng có phép\b/i.test(item)).length;
+      if (type === "excused" && existingExcusedCount >= 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Học viên đã đủ 5 đơn vắng có phép"
+        });
+      }
       const value = existingLeave ? `${existingLeave} ; ${leaveText}` : leaveText;
 
       await sheets.spreadsheets.values.update({

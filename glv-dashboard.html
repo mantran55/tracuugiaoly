@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260916-mobiletidy">
+    <link rel="stylesheet" href="styles.css?v=20260917-mobile-profiles">
 </head>
 
 <body class="dashboard-page">
@@ -147,6 +147,9 @@
                                 tune
                             </span>
                             <span>Lọc điểm TL/GL</span>
+                            <button type="button" class="filter-popup-close" onclick="toggleQuickFilter()" aria-label="Đóng bộ lọc">
+                                <span class="material-icons-round">close</span>
+                            </button>
                         </div>
 
                         <div class="filter-option-group">
@@ -1041,7 +1044,7 @@
 
                 <td class="student-list-name" data-label="Học viên" style="font-weight:700;text-align:left;">
                     <img class="student-list-avatar" src="${escapeHtml(student.avatar || 'ava.png')}" alt="" loading="lazy" onerror="this.src='ava.png'">
-                    <span class="student-list-name-text">${escapeHtml(student.name)}<small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
+                    <span class="student-list-name-text">${escapeHtml(student.name)}<small class="student-list-mobile-status ${student.status?.trim().toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${student.status ? escapeHtml(student.status) : 'Chưa cập nhật'}</small><small class="student-list-mobile-scores"><span>TL: <i>${massVal >= 0 ? massVal : '—'}</i></span><b>|</b><span>GL: <i>${catVal >= 0 ? catVal : '—'}</i></span></small><small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
                 </td>
 
                 <td data-label="Tình trạng">
@@ -1375,6 +1378,26 @@
                 data.motherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Mẹ</strong>${escapeHtml(data.motherName)}</div>` : '',
                 data.phones?.length ? `<div class="family-info-item family-phones"><strong><span class="material-icons-round">phone</span>Số điện thoại · chạm để sao chép</strong>${data.phones.map(phone => `<button type="button" class="copy-phone" onclick="copyPhone('${escapeHtml(phone)}')">${escapeHtml(formatPhone(phone))}</button>`).join('')}</div>` : ''
             ].filter(Boolean).join('');
+            const leaveItems = Array.isArray(data.leaveItems)
+                ? data.leaveItems.filter(Boolean)
+                : String(data.leave || '').split(/\s*;\s*/).filter(Boolean);
+            const excusedLeaves = leaveItems.filter(item => /^Vắng có phép\b/i.test(String(item)));
+            const makeupLeaves = leaveItems.filter(item => !/^Vắng có phép\b/i.test(String(item)));
+            const remainingExcusedLeaves = Math.max(0, 5 - excusedLeaves.length);
+            const leaveInfo = leaveItems.length ? `
+                <section class="student-leaves" aria-label="Đơn phép">
+                    ${makeupLeaves.length ? `
+                        <div class="student-leave-group makeup">
+                            <div class="student-leave-heading"><span class="material-icons-round">event_available</span>Đơn phép thay thế</div>
+                            ${makeupLeaves.map(item => `<div class="student-leave-entry">${escapeHtml(item)}</div>`).join('')}
+                        </div>` : ''}
+                    ${excusedLeaves.length ? `
+                        <div class="student-leave-group excused">
+                            <div class="student-leave-heading"><span class="material-icons-round">event_busy</span>Đơn vắng có phép</div>
+                            ${excusedLeaves.map(item => `<div class="student-leave-entry">${escapeHtml(item)}</div>`).join('')}
+                            <div class="student-leave-remaining">Chỉ còn ${remainingExcusedLeaves} đơn phép vắng</div>
+                        </div>` : ''}
+                </section>` : '';
 
             const rows = attendance.map((item) => {
                 return `
@@ -1427,7 +1450,7 @@
                             ${total} buổi điểm danh
                         </div>
                     </div>
-                    ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
+                    ${leaveInfo}
                     ${familyInfo ? `<div class="family-info">${familyInfo}</div>` : ''}
                 </div>
             </div>
@@ -1604,10 +1627,24 @@
         }
 
         function toggleQuickFilter() {
-            document
-                .getElementById('quickFilterPanel')
-                .classList
-                .toggle('hidden');
+            const popup = document.getElementById('quickFilterPanel');
+            if (!popup) return;
+            const isOpening = popup.classList.contains('hidden');
+
+            // .section có animation transform nên position:fixed bên trong sẽ
+            // bị tính theo đáy danh sách. Trên mobile, đưa popup ra body để
+            // bottom-sheet luôn phủ trên màn hình.
+            if (isOpening && window.matchMedia('(max-width: 768px)').matches && popup.parentElement !== document.body) {
+                popup._filterHome = popup.parentElement;
+                document.body.appendChild(popup);
+            }
+
+            popup.classList.toggle('hidden', !isOpening);
+
+            if (!isOpening && popup._filterHome) {
+                popup._filterHome.appendChild(popup);
+                popup._filterHome = null;
+            }
         }
 
         function renderReportPreview(students){
@@ -2771,11 +2808,8 @@
             const popup =
                 document.getElementById('quickFilterPanel');
 
-            if(
-                wrapper &&
-                !wrapper.contains(e.target)
-            ){
-                popup.classList.add('hidden');
+            if (wrapper && popup && !wrapper.contains(e.target) && !popup.contains(e.target)) {
+                if (!popup.classList.contains('hidden')) toggleQuickFilter();
             }
 
         });

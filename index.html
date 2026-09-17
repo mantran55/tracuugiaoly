@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="favico.png">
-    <link rel="stylesheet" href="styles.css?v=20260914-qr">
+    <link rel="stylesheet" href="styles.css?v=20260917-leaves2">
 </head>
 
 <body class="index-page">
@@ -490,6 +490,26 @@
                 data.motherName ? `<div class="family-info-item"><strong><span class="material-icons-round">person</span>Mẹ</strong>${escapeHtml(data.motherName)}</div>` : '',
                 data.phones?.length ? `<div class="family-info-item family-phones"><strong><span class="material-icons-round">phone</span>Số điện thoại · chạm để sao chép</strong>${data.phones.map(phone => `<button type="button" class="copy-phone" onclick="copyPhone('${escapeHtml(phone)}')">${escapeHtml(formatPhone(phone))}</button>`).join('')}</div>` : ''
             ].filter(Boolean).join('');
+            const leaveItems = Array.isArray(data.leaveItems)
+                ? data.leaveItems.filter(Boolean)
+                : String(data.leave || '').split(/\s*;\s*/).filter(Boolean);
+            const excusedLeaves = leaveItems.filter(item => /^Vắng có phép\b/i.test(String(item)));
+            const makeupLeaves = leaveItems.filter(item => !/^Vắng có phép\b/i.test(String(item)));
+            const remainingExcusedLeaves = Math.max(0, 5 - excusedLeaves.length);
+            const leaveInfo = leaveItems.length ? `
+                <section class="student-leaves" aria-label="Đơn phép">
+                    ${makeupLeaves.length ? `
+                        <div class="student-leave-group makeup">
+                            <div class="student-leave-heading"><span class="material-icons-round">event_available</span>Đơn phép thay thế</div>
+                            ${makeupLeaves.map(item => `<div class="student-leave-entry">${escapeHtml(item)}</div>`).join('')}
+                        </div>` : ''}
+                    ${excusedLeaves.length ? `
+                        <div class="student-leave-group excused">
+                            <div class="student-leave-heading"><span class="material-icons-round">event_busy</span>Đơn vắng có phép</div>
+                            ${excusedLeaves.map(item => `<div class="student-leave-entry">${escapeHtml(item)}</div>`).join('')}
+                            <div class="student-leave-remaining">Chỉ còn ${remainingExcusedLeaves} đơn phép vắng</div>
+                        </div>` : ''}
+                </section>` : '';
 
             const rows = attendance.map((item) => {
 
@@ -566,7 +586,7 @@
                             ${total} buổi điểm danh
                         </div>
                     </div>
-                    ${data.leave ? `<div class="student-leave-box"><strong>Đơn phép</strong>${escapeHtml(data.leave)}</div>` : ''}
+                    ${leaveInfo}
                     ${familyInfo ? `<div class="family-info">${familyInfo}</div>` : ''}
                 </div>
             </div>
