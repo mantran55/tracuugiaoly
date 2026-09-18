@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260917-mobile-input-heights">
+    <link rel="stylesheet" href="styles.css?v=20260918-mobile-low-scores">
 </head>
 
 <body class="dashboard-page">
@@ -1046,7 +1046,7 @@
 
                 <td class="student-list-name" data-label="Học viên" style="font-weight:700;text-align:left;">
                     <img class="student-list-avatar" src="${escapeHtml(student.avatar || 'ava.png')}" alt="" loading="lazy" onerror="this.src='ava.png'">
-                    <span class="student-list-name-text"><span class="student-list-name-full">${escapeHtml(studentName)}</span><span class="student-list-name-short" title="${escapeHtml(studentName)}">${escapeHtml(mobileStudentName)}</span><small class="student-list-mobile-status ${student.status?.trim().toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${student.status ? escapeHtml(student.status) : 'Chưa cập nhật'}</small><small class="student-list-mobile-scores"><span>TL: <i>${massVal >= 0 ? massVal : '—'}</i></span><b>|</b><span>GL: <i>${catVal >= 0 ? catVal : '—'}</i></span></small><small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
+                    <span class="student-list-name-text"><span class="student-list-name-full">${escapeHtml(studentName)}</span><span class="student-list-name-short" title="${escapeHtml(studentName)}">${escapeHtml(mobileStudentName)}</span><small class="student-list-mobile-status ${student.status?.trim().toLowerCase() === 'đang học' ? 'status-active' : 'status-warning'}">${student.status ? escapeHtml(student.status) : 'Chưa cập nhật'}</small><small class="student-list-mobile-scores"><span>TL: <i class="${massVal >= 0 && massVal < 1 ? 'is-low' : ''}">${massVal >= 0 ? massVal : '—'}</i></span><b>|</b><span>GL: <i class="${catVal >= 0 && catVal < 1 ? 'is-low' : ''}">${catVal >= 0 ? catVal : '—'}</i></span></small><small class="student-list-mobile-meta">Mã: ${escapeHtml(student.studentId)} · Lớp: ${escapeHtml(student.className || '—')}</small></span>
                 </td>
 
                 <td data-label="Tình trạng">

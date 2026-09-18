@@ -6038,7 +6038,9 @@ body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-s
     .dashboard-page .student-list-mobile-scores { margin-top:1px; padding-top:5px; border-top:1px solid #f1f5f9; gap:4px; font-size:8px; color:#64748b; }
     .dashboard-page .student-list-mobile-scores span { gap:3px; }
     .dashboard-page .student-list-mobile-scores i { min-width:20px; height:18px; padding:0 4px; border-color:#bbf7d0; border-radius:5px; background:#f0fdf4; color:#059669; font-size:9px; }
+    .dashboard-page .student-list-mobile-scores i.is-low { border-color:#fecaca; background:#fee2e2; color:#dc2626; }
     .dashboard-page .student-list-mobile-scores b { padding:0 1px; color:#cbd5e1; }
+    .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.danger-row:not(.class-group-row) { border-color:#fecaca; border-left-color:#ef4444; background:#fff7f7; }
     .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row { margin:8px 0 0 !important; }
     .dashboard-page .student-list-layout .table-wrapper > table > tbody > tr.class-group-row > td { min-height:34px; padding:8px 10px !important; background:#f8fbff !important; }
 }
