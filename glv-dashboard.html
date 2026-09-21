@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260918-mobile-low-scores">
+    <link rel="stylesheet" href="styles.css?v=20260921-quality-overview">
 </head>
 
 <body class="dashboard-page">
@@ -87,6 +87,31 @@
                 <div class="stat-label">Hiện Diện Hôm Nay</div>
             </div>
         </div>
+
+        <section class="section quality-overview-section" id="qualityOverviewSection">
+            <div class="section-header">
+                <div class="section-title"><span class="material-icons-round">insights</span>Tổng Quan Chất Lượng</div>
+                <div class="section-line"></div>
+                <div class="section-count" id="qualityOverviewPeriod">Đang tải…</div>
+            </div>
+            <div class="quality-overview-filters">
+                <select id="qualityOverviewClass" aria-label="Lọc lớp tổng quan"></select>
+                <select id="qualityOverviewStatus" aria-label="Lọc tình trạng tổng quan">
+                    <option value="">Tất cả tình trạng</option>
+                    <option value="đang học">Đang học</option>
+                    <option value="nghỉ ngang">Nghỉ ngang</option>
+                    <option value="nghỉ từ đầu">Nghỉ từ đầu</option>
+                    <option value="chuyển xứ">Chuyển xứ</option>
+                    <option value="nợ bài">Nợ bài</option>
+                    <option value="thiếu điểm lễ">Thiếu điểm lễ</option>
+                    <option value="thiếu điểm giáo lý">Thiếu điểm giáo lý</option>
+                </select>
+                <label><span>Từ ngày</span><input id="qualityOverviewStart" type="date"></label>
+                <label><span>Đến ngày</span><input id="qualityOverviewEnd" type="date"></label>
+                <button type="button" class="quality-overview-apply" onclick="loadQualityOverview()"><span class="material-icons-round">filter_alt</span>Cập nhật</button>
+            </div>
+            <div id="qualityOverviewContent" class="quality-overview-content"><div class="quality-overview-loading">Đang tổng hợp dữ liệu chuyên cần…</div></div>
+        </section>
 
         <!-- ================= TOP 5 HỌC VIÊN XUẤT SẮC ================= -->
         <section class="section top-students-section" id="topStudentsSection" hidden>
@@ -673,6 +698,8 @@
                 loadClassFilter();
                 filterStudents();
                 renderTopStudents();
+                setupQualityOverviewFilters();
+                loadQualityOverview();
             } catch (err) {
                 console.error(err);
                 const tbody = document.getElementById('studentTable');
@@ -744,6 +771,115 @@
 
             const classes = [...new Set(allStudents.map(x => x.className))];
             document.getElementById('totalClasses').textContent = classes.length;
+        }
+
+        let qualityOverviewInitialized = false;
+
+        function setupQualityOverviewFilters() {
+            const classSelect = document.getElementById('qualityOverviewClass');
+            if (!classSelect) return;
+            const currentClass = classSelect.value;
+            const classes = [...new Set(allStudents.map(student => student.className).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'vi'));
+            classSelect.innerHTML = '<option value="">Tất cả lớp</option>' + classes
+                .map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+            if (classes.includes(currentClass)) classSelect.value = currentClass;
+
+            if (!qualityOverviewInitialized) {
+                const today = new Date();
+                const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                document.getElementById('qualityOverviewStart').value = '2026-09-14';
+                document.getElementById('qualityOverviewEnd').value = todayValue < '2026-09-14' ? '2026-09-14' : todayValue;
+                qualityOverviewInitialized = true;
+            }
+        }
+
+        function formatOverviewMonth(value) {
+            const [year, month] = String(value || '').split('-');
+            return year && month ? `T${Number(month)}/${year.slice(2)}` : value;
+        }
+
+        function formatOverviewDate(value) {
+            const [year, month, day] = String(value || '').split('-');
+            return year && month && day ? `${day}/${month}/${year}` : value;
+        }
+
+        function renderQualityTrend(trend) {
+            if (!trend.length) return '<div class="quality-chart-empty">Chưa có ngày điểm danh trong khoảng đã chọn.</div>';
+            const width = 760;
+            const height = 220;
+            const padding = { top: 20, right: 18, bottom: 34, left: 34 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+            const maximum = Math.max(1, ...trend.flatMap(item => [item.massAbsent, item.catechismAbsent]));
+            const point = (value, index) => {
+                const x = padding.left + (trend.length === 1 ? chartWidth / 2 : index * chartWidth / (trend.length - 1));
+                const y = padding.top + chartHeight - (value / maximum) * chartHeight;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            };
+            const massPoints = trend.map((item, index) => point(item.massAbsent, index)).join(' ');
+            const catechismPoints = trend.map((item, index) => point(item.catechismAbsent, index)).join(' ');
+            const labelIndexes = [...new Set([0, Math.floor((trend.length - 1) / 2), trend.length - 1])];
+            return `<svg class="quality-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Xu hướng vắng theo ngày">
+                <line x1="${padding.left}" y1="${padding.top + chartHeight}" x2="${width - padding.right}" y2="${padding.top + chartHeight}" class="quality-axis" />
+                <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartHeight}" class="quality-axis" />
+                <text x="4" y="${padding.top + 7}" class="quality-axis-label">${maximum}</text>
+                <text x="13" y="${padding.top + chartHeight}" class="quality-axis-label">0</text>
+                <polyline points="${massPoints}" class="quality-line quality-line-mass" />
+                <polyline points="${catechismPoints}" class="quality-line quality-line-catechism" />
+                ${trend.map((item, index) => `${item.massAbsent ? `<circle cx="${point(item.massAbsent, index).split(',')[0]}" cy="${point(item.massAbsent, index).split(',')[1]}" r="3" class="quality-dot quality-dot-mass"><title>${escapeHtml(item.label)}: ${item.massAbsent} vắng TL</title></circle>` : ''}${item.catechismAbsent ? `<circle cx="${point(item.catechismAbsent, index).split(',')[0]}" cy="${point(item.catechismAbsent, index).split(',')[1]}" r="3" class="quality-dot quality-dot-catechism"><title>${escapeHtml(item.label)}: ${item.catechismAbsent} vắng GL</title></circle>` : ''}`).join('')}
+                ${labelIndexes.map(index => `<text x="${point(0, index).split(',')[0]}" y="${height - 8}" text-anchor="middle" class="quality-axis-label">${escapeHtml(trend[index].label)}</text>`).join('')}
+            </svg>`;
+        }
+
+        function renderQualityOverview(data) {
+            const container = document.getElementById('qualityOverviewContent');
+            const period = document.getElementById('qualityOverviewPeriod');
+            const summary = data.summary || {};
+            const monthly = data.monthly || [];
+            period.textContent = `${formatOverviewDate(data.filters.startDate)} – ${formatOverviewDate(data.filters.endDate)}`;
+            const rate = value => value === null || value === undefined ? '—' : `${value}%`;
+            container.innerHTML = `
+                <div class="quality-kpis">
+                    <div class="quality-kpi mass"><span class="material-icons-round">church</span><div><small>Chuyên cần Thánh lễ</small><strong>${rate(summary.massRate)}</strong><em>${summary.massAbsent || 0} lượt vắng</em></div></div>
+                    <div class="quality-kpi catechism"><span class="material-icons-round">menu_book</span><div><small>Chuyên cần Giáo lý</small><strong>${rate(summary.catechismRate)}</strong><em>${summary.catechismAbsent || 0} lượt vắng</em></div></div>
+                    <div class="quality-kpi attention"><span class="material-icons-round">priority_high</span><div><small>Cần quan tâm</small><strong>${summary.attentionCount || 0}</strong><em>trên ${summary.students || 0} học viên</em></div></div>
+                </div>
+                <div class="quality-charts-grid">
+                    <article class="quality-chart-card">
+                        <div class="quality-chart-heading"><div><span class="material-icons-round">bar_chart</span>Chuyên cần theo tháng</div><small>TL / GL</small></div>
+                        <div class="quality-bars">${monthly.length ? monthly.map(item => `<div class="quality-bar-row"><span>${escapeHtml(formatOverviewMonth(item.month))}</span><div class="quality-bar-track"><i class="quality-bar-mass" style="width:${Math.max(0, item.massRate || 0)}%"></i><i class="quality-bar-catechism" style="width:${Math.max(0, item.catechismRate || 0)}%"></i></div><b>${rate(item.massRate)} <em>/</em> ${rate(item.catechismRate)}</b></div>`).join('') : '<div class="quality-chart-empty">Chưa có dữ liệu điểm danh.</div>'}</div>
+                        <div class="quality-legend"><span><i class="quality-legend-mass"></i>Thánh lễ</span><span><i class="quality-legend-catechism"></i>Giáo lý</span></div>
+                    </article>
+                    <article class="quality-chart-card">
+                        <div class="quality-chart-heading"><div><span class="material-icons-round">show_chart</span>Xu hướng vắng</div><small>theo ngày</small></div>
+                        <div class="quality-trend-wrap">${renderQualityTrend(data.trend || [])}</div>
+                        <div class="quality-legend"><span><i class="quality-legend-mass"></i>Vắng Thánh lễ</span><span><i class="quality-legend-catechism"></i>Vắng Giáo lý</span></div>
+                    </article>
+                </div>`;
+        }
+
+        async function loadQualityOverview() {
+            const container = document.getElementById('qualityOverviewContent');
+            const className = document.getElementById('qualityOverviewClass').value;
+            const status = document.getElementById('qualityOverviewStatus').value;
+            const startDate = document.getElementById('qualityOverviewStart').value;
+            const endDate = document.getElementById('qualityOverviewEnd').value;
+            if (!startDate || !endDate || startDate > endDate) {
+                showToast('Vui lòng chọn khoảng ngày hợp lệ');
+                return;
+            }
+            container.innerHTML = '<div class="quality-overview-loading">Đang tổng hợp dữ liệu chuyên cần…</div>';
+            try {
+                const query = new URLSearchParams({ startDate, endDate, className });
+                if (status) query.set('statuses', status);
+                const response = await fetch(api(`/quality-overview?${query.toString()}`));
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tải tổng quan');
+                renderQualityOverview(data);
+            } catch (error) {
+                container.innerHTML = `<div class="quality-overview-loading quality-overview-error">${escapeHtml(error.message)}</div>`;
+            }
         }
 
         // ============================================================
@@ -1649,7 +1785,7 @@
             }
         }
 
-        function renderReportPreview(students){
+        function renderReportPreview(students, calendar = null){
 
             const reportDate =
                 document.getElementById("reportDate").value;
@@ -1662,14 +1798,28 @@
             const displayDate =
                 `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
 
-            // Có điểm danh nếu có mark hoặc có TL/GL
-            const present =
-                students.filter(
-                    s => s.mark || s.tl || s.gl
-                ).length;
+            const massRequired = calendar?.massRequired !== false;
+            const catechismRequired = calendar?.catechismRequired !== false;
+            const hasAttendance = massRequired || catechismRequired;
 
-            const absent =
-                students.length - present;
+            if (!hasAttendance) {
+                document.getElementById("reportRenderContainer").innerHTML = `
+                    <div class="report-image" style="width:100%;background:#fff;padding:36px;box-sizing:border-box;font-family:Arial,sans-serif;text-align:center;">
+                        <h1 style="color:#2563eb;margin:0 0 12px;">BÁO CÁO ĐIỂM DANH</h1>
+                        <div style="font-size:18px;font-weight:700;">${className ? `Lớp ${escapeHtml(className)}` : 'Tất cả lớp'}</div>
+                        <div style="margin-top:6px;font-size:16px;">Ngày ${displayDate}</div>
+                        <div style="margin-top:22px;padding:16px;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:17px;font-weight:700;">${escapeHtml(calendar?.note || 'Không có lịch điểm danh trong ngày này.')}</div>
+                    </div>`;
+                createPreviewImage();
+                return;
+            }
+
+            const isMassAbsent = student => massRequired && !student.tl;
+            const isCatechismAbsent = student => catechismRequired && !student.gl;
+            const isStudentAbsent = student => isMassAbsent(student) || isCatechismAbsent(student);
+            const isAbsentBoth = student => isMassAbsent(student) && isCatechismAbsent(student);
+            const massAbsentCount = students.filter(isMassAbsent).length;
+            const catechismAbsentCount = students.filter(isCatechismAbsent).length;
 
             const sortedStudents = [...students].sort((a, b) => {
                 const lastName = name => String(name || '').trim().split(/\s+/).pop() || '';
@@ -1692,7 +1842,7 @@
 
                     <tr style="
                         ${
-                            (!s.tl && !s.gl)
+                            isAbsentBoth(s)
                             ? 'background:#ffe5e5;font-weight:bold;'
                             : ''
                         }
@@ -1709,9 +1859,9 @@
 
                         <td>${s.status || ''}</td>
 
-                        <td>${s.tl ? '✓' : ''}</td>
+                        <td style="${isMassAbsent(s) && !isAbsentBoth(s) ? 'background:#ffe5e5;color:#b91c1c;font-weight:bold;' : ''}">${massRequired ? (s.tl ? '✓' : '') : '—'}</td>
 
-                        <td>${s.gl ? '✓' : ''}</td>
+                        <td style="${isCatechismAbsent(s) && !isAbsentBoth(s) ? 'background:#ffe5e5;color:#b91c1c;font-weight:bold;' : ''}">${catechismRequired ? (s.gl ? '✓' : '') : 'Nghỉ'}</td>
                     </tr>
 
                 `).join('');
@@ -1751,6 +1901,8 @@
                             Ngày ${displayDate}
                         </div>
 
+                        ${calendar?.note ? `<div style="margin-top:8px;color:#9a3412;font-size:14px;font-weight:700;">${escapeHtml(calendar.note)}</div>` : ''}
+
                     </div>
 
                     <div style="
@@ -1769,8 +1921,8 @@
                                 <th style="width:8%;text-align:center">STT</th>
                                 <th style="width:58%">Họ tên</th>
                                 <th style="width:18%">TT học viên</th>
-                                <th style="width:8%">TL</th>
-                                <th style="width:8%">GL</th>
+                                <th style="width:8%">${massRequired ? 'TL' : 'Nghỉ'}</th>
+                                <th style="width:8%">${catechismRequired ? 'GL' : 'Nghỉ'}</th>
                             </tr>
 
                             ${renderRows(leftStudents)}
@@ -1787,8 +1939,8 @@
                                 <th style="width:8%;text-align:center">STT</th>
                                 <th style="width:58%">Họ tên</th>
                                 <th style="width:18%">TT học viên</th>
-                                <th style="width:8%">TL</th>
-                                <th style="width:8%">GL</th>
+                                <th style="width:8%">${massRequired ? 'TL' : 'Nghỉ'}</th>
+                                <th style="width:8%">${catechismRequired ? 'GL' : 'Nghỉ'}</th>
                             </tr>
 
                             ${renderRows(rightStudents, half)}
@@ -1806,9 +1958,9 @@
 
                         Tổng: ${students.length}
                         &nbsp;•&nbsp;
-                        Có mặt: ${present}
+                        Vắng TL: ${massRequired ? massAbsentCount : '—'}
                         &nbsp;•&nbsp;
-                        Vắng: ${absent}
+                        Vắng GL: ${catechismRequired ? catechismAbsentCount : '—'}
 
                     </div>
 
@@ -2385,12 +2537,13 @@
 
             const summary = document.getElementById('monthlyReportSummaryNote');
             if (summary) {
-                summary.textContent = `${monthlyReportLabel}${monthlyReportData.className ? ` · Lớp ${monthlyReportData.className}` : ''} · Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi${daysOff ? ` (nghỉ ${daysOff} ngày)` : ''}`;
+                summary.textContent = `${monthlyReportLabel}${monthlyReportData.className ? ` · Lớp ${monthlyReportData.className}` : ''} · Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi${daysOff ? ` (nghỉ thêm ${daysOff} ngày)` : ''}`;
             }
             const note = document.getElementById('monthlyReportDaysOffNote');
             if (note) {
-                note.textContent = daysOff ? `Nghỉ Giáo Lý: ${daysOff} ngày${monthlyDaysOffNote ? ` · ${monthlyDaysOffNote}` : ''}` : '';
-                note.classList.toggle('hidden', !daysOff);
+                const calendarNote = (monthlyReportData.calendarNotes || []).join(' · ');
+                note.textContent = [calendarNote, daysOff ? `Nghỉ Giáo Lý thêm: ${daysOff} ngày${monthlyDaysOffNote ? ` · ${monthlyDaysOffNote}` : ''}` : ''].filter(Boolean).join(' · ');
+                note.classList.toggle('hidden', !note.textContent);
             }
         }
 
@@ -2418,8 +2571,8 @@
                 monthlyReportLabel = label;
                 document.getElementById('monthlyReportActions').classList.remove('hidden');
                 result.innerHTML = `
-                    <div id="monthlyReportSummaryNote" class="monthly-report-note">${escapeHtml(label)}${data.className ? ` · Lớp ${escapeHtml(data.className)}` : ''} · Thánh Lễ dự kiến: ${data.scheduledMass} buổi · Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi${data.catechismDaysOff ? ` (nghỉ ${data.catechismDaysOff} ngày)` : ''}</div>
-                    <div id="monthlyReportDaysOffNote" class="monthly-report-note ${data.catechismDaysOff ? '' : 'hidden'}">${data.catechismDaysOff ? `Nghỉ Giáo Lý: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}` : ''}</div>
+                    <div id="monthlyReportSummaryNote" class="monthly-report-note">${escapeHtml(label)}${data.className ? ` · Lớp ${escapeHtml(data.className)}` : ''} · Thánh Lễ dự kiến: ${data.scheduledMass} buổi · Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi${data.catechismDaysOff ? ` (nghỉ thêm ${data.catechismDaysOff} ngày)` : ''}</div>
+                    <div id="monthlyReportDaysOffNote" class="monthly-report-note ${(data.calendarNotes?.length || data.catechismDaysOff) ? '' : 'hidden'}">${[...(data.calendarNotes || []), data.catechismDaysOff ? `Nghỉ Giáo Lý thêm: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}` : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div>
                     <div class="monthly-report-table-wrap">
                         <table class="monthly-report-table">
                             <thead>
@@ -2459,8 +2612,9 @@
                 ['BÁO CÁO ĐIỂM DANH ' + monthlyReportLabel.toUpperCase() + (data.className ? ` - LỚP ${data.className.toUpperCase()}` : '')],
                 [`Thánh Lễ dự kiến: ${data.scheduledMass} buổi`, '', '', `Giáo Lý dự kiến: ${data.effectiveCatechismDays} buổi`]
             ];
+            (data.calendarNotes || []).forEach(note => rows.push([note]));
             if (data.catechismDaysOff) {
-                rows.push([`Nghỉ Giáo Lý: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` - ${monthlyDaysOffNote}` : ''}`]);
+                rows.push([`Nghỉ Giáo Lý thêm: ${data.catechismDaysOff} ngày${monthlyDaysOffNote ? ` - ${monthlyDaysOffNote}` : ''}`]);
             }
             const headerRow = rows.length;
             rows.push(
@@ -2489,7 +2643,8 @@
             const printable = document.createElement('div');
             await document.fonts.ready;
             printable.style.cssText = "position:fixed;left:-10000px;top:0;width:980px;padding:28px;background:#fff;color:#111;font-family:'Be Vietnam Pro',Arial,sans-serif;";
-            printable.innerHTML = `<h2 style="margin:0 0 8px;color:#5b21b6;text-align:center;">BÁO CÁO ĐIỂM DANH ${escapeHtml(monthlyReportLabel).toUpperCase()}</h2><p style="margin:0 0 8px;text-align:center;font-size:14px;">${monthlyReportData.className ? `Lớp ${escapeHtml(monthlyReportData.className)} · ` : ''}Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi</p>${monthlyReportData.catechismDaysOff ? `<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#9f1239;">Nghỉ Giáo Lý: ${monthlyReportData.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${escapeHtml(monthlyDaysOffNote)}` : ''}</p>` : '<div style="height:10px"></div>'}`;
+            const calendarNote = [...(monthlyReportData.calendarNotes || []), monthlyReportData.catechismDaysOff ? `Nghỉ Giáo Lý thêm: ${monthlyReportData.catechismDaysOff} ngày${monthlyDaysOffNote ? ` · ${monthlyDaysOffNote}` : ''}` : ''].filter(Boolean).map(escapeHtml).join(' · ');
+            printable.innerHTML = `<h2 style="margin:0 0 8px;color:#5b21b6;text-align:center;">BÁO CÁO ĐIỂM DANH ${escapeHtml(monthlyReportLabel).toUpperCase()}</h2><p style="margin:0 0 8px;text-align:center;font-size:14px;">${monthlyReportData.className ? `Lớp ${escapeHtml(monthlyReportData.className)} · ` : ''}Thánh Lễ dự kiến: ${monthlyReportData.scheduledMass} buổi · Giáo Lý dự kiến: ${monthlyReportData.effectiveCatechismDays} buổi</p>${calendarNote ? `<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#9f1239;">${calendarNote}</p>` : '<div style="height:10px"></div>'}`;
             const copy = table.cloneNode(true);
             copy.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;';
             copy.querySelectorAll('th, td').forEach(cell => {
@@ -2631,13 +2786,63 @@
                     return;
                 }
 
-                container.innerHTML = data.requests.map(item => `
-                    <div class="leave-item" onclick="openLeaveEditModal('${escapeHtml(item.studentId)}')">
-                        <div class="leave-item-name">${escapeHtml(item.name)} <span class="leave-count">${item.excusedCount || 0} đơn vắng</span></div>
-                        <div class="leave-item-meta">${escapeHtml(item.studentId)} · ${escapeHtml(item.className)}</div>
-                        <div class="leave-item-text">${escapeHtml(item.leave)}</div>
-                    </div>
-                `).join('');
+                // Giữ nguyên thứ tự lớp và học viên từ dữ liệu nguồn, rồi chia từng đơn riêng
+                // để GLV dễ theo dõi: Lớp → loại đơn → học viên.
+                const classes = new Map();
+                data.requests.forEach(item => {
+                    const className = item.className || 'Chưa xếp lớp';
+                    if (!classes.has(className)) {
+                        classes.set(className, { makeup: [], excused: [] });
+                    }
+
+                    const leaveItems = Array.isArray(item.leaveItems) && item.leaveItems.length
+                        ? item.leaveItems
+                        : String(item.leave || '').split(/\s*;\s*/).filter(Boolean);
+
+                    leaveItems.forEach(leaveText => {
+                        const type = /^Vắng có phép\b/i.test(leaveText) ? 'excused' : 'makeup';
+                        classes.get(className)[type].push({ ...item, leaveText });
+                    });
+                });
+
+                const renderLeaveType = (type, title, icon, entries) => {
+                    if (!entries.length) return '';
+                    return `
+                        <section class="leave-type-group leave-type-${type}">
+                            <div class="leave-type-heading">
+                                <span class="material-icons-round">${icon}</span>
+                                <span>${title}</span>
+                                <span class="leave-type-total">${entries.length}</span>
+                            </div>
+                            <div class="leave-type-items">
+                                ${entries.map(entry => `
+                                    <button type="button" class="leave-request-entry"
+                                        onclick="openLeaveEditModal('${escapeHtml(entry.studentId)}')">
+                                        <span class="leave-request-person">
+                                            <strong>${escapeHtml(entry.name)}</strong>
+                                            <small>Mã: ${escapeHtml(entry.studentId)}</small>
+                                        </span>
+                                        <span class="leave-request-detail">${escapeHtml(entry.leaveText)}</span>
+                                        <span class="material-icons-round leave-request-arrow">chevron_right</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </section>`;
+                };
+
+                container.innerHTML = [...classes.entries()].map(([className, groups]) => {
+                    const total = groups.makeup.length + groups.excused.length;
+                    return `
+                        <section class="leave-class-group">
+                            <div class="leave-class-heading">
+                                <span class="material-icons-round">school</span>
+                                <strong>${escapeHtml(className)}</strong>
+                                <span>${total} đơn</span>
+                            </div>
+                            ${renderLeaveType('makeup', 'Đơn phép thay thế', 'event_available', groups.makeup)}
+                            ${renderLeaveType('excused', 'Đơn vắng có phép', 'event_busy', groups.excused)}
+                        </section>`;
+                }).join('');
             } catch (err) {
                 container.innerHTML = `<div class="leave-empty">${escapeHtml(err.message)}</div>`;
             }

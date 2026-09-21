@@ -441,6 +441,77 @@ async function getCCAMSData(phone, studentId) {
   return { totalMass, catechism, adoration, attendance };
 }
 
+// Lịch mục vụ của niên khóa 2026–2027. Báo cáo tháng và số buổi vắng đều
+// dùng chung lịch này, để không tính nhầm các ngày chưa khai giảng hoặc nghỉ.
+const ATTENDANCE_CALENDAR = {
+  firstAttendanceDay: "2026-09-14",
+  fullDaysOff: [
+    { start: "2027-02-07", end: "2027-02-14", label: "Nghỉ Tết 07/02–14/02/2027 — không tính Thánh lễ và Giáo lý" }
+  ],
+  catechismDaysOff: [
+    { date: "2027-03-28", label: "Nghỉ Giáo lý ngày 28/03/2027 — vẫn có Thánh lễ" },
+    { date: "2027-05-02", label: "Nghỉ Giáo lý ngày 02/05/2027 (lễ 30/4–1/5) — vẫn có Thánh lễ" }
+  ]
+};
+
+function formatIsoDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function getMonthlyAttendanceSchedule(year, month) {
+  const massDates = new Set();
+  const catechismDates = new Set();
+  const notes = [];
+  if (year === 2026 && month === 9) {
+    notes.push("Tháng 09/2026 bắt đầu tính điểm danh từ ngày 14/09");
+  }
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+  for (let day = 1; day <= lastDay; day++) {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const isoDate = formatIsoDate(year, month, day);
+    const weekday = date.getUTCDay();
+    if (isoDate < ATTENDANCE_CALENDAR.firstAttendanceDay) continue;
+
+    const fullDayOff = ATTENDANCE_CALENDAR.fullDaysOff.find(item =>
+      isoDate >= item.start && isoDate <= item.end
+    );
+    if (fullDayOff) {
+      if ((weekday === 0 || weekday === 4) && !notes.includes(fullDayOff.label)) notes.push(fullDayOff.label);
+      continue;
+    }
+
+    if (weekday === 0 || weekday === 4) massDates.add(isoDate);
+    if (weekday === 0) {
+      const catechismDayOff = ATTENDANCE_CALENDAR.catechismDaysOff.find(item => item.date === isoDate);
+      if (catechismDayOff) {
+        if (!notes.includes(catechismDayOff.label)) notes.push(catechismDayOff.label);
+      } else {
+        catechismDates.add(isoDate);
+      }
+    }
+  }
+
+  return { massDates, catechismDates, notes };
+}
+
+function getDailyAttendanceSchedule(isoDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  if (isoDate < ATTENDANCE_CALENDAR.firstAttendanceDay) {
+    return { massRequired: false, catechismRequired: false, note: "Chưa bắt đầu điểm danh niên khóa (từ 14/09/2026)" };
+  }
+  const fullDayOff = ATTENDANCE_CALENDAR.fullDaysOff.find(item => isoDate >= item.start && isoDate <= item.end);
+  if (fullDayOff) return { massRequired: false, catechismRequired: false, note: fullDayOff.label };
+
+  const weekday = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
+  const catechismDayOff = ATTENDANCE_CALENDAR.catechismDaysOff.find(item => item.date === isoDate);
+  return {
+    massRequired: weekday === 0 || weekday === 4,
+    catechismRequired: weekday === 0 && !catechismDayOff,
+    note: catechismDayOff?.label || ""
+  };
+}
+
 // Mã đăng nhập Dashboard được lưu trong Cloudflare Secret DASHBOARD_CODES.
 app.post("/auth/dashboard", (req, res) => {
   const code = String(req.body?.code || "").trim();
@@ -978,9 +1049,9 @@ app.get("/monthly-attendance-report", async (req, res) => {
     const headers = state.cacheData?.[2] || [];
     const monthColumns = headers.map((header, index) => ({ index, date: parseAttendanceHeaderDate(header, year) }))
       .filter(item => item.date && item.date.year === year && item.date.month === month);
-
-    const scheduledMass = countWeekdaysInMonth(year, month, [0, 4]);
-    const scheduledCatechism = countWeekdaysInMonth(year, month, [0]);
+    const calendarSchedule = getMonthlyAttendanceSchedule(year, month);
+    const scheduledMass = calendarSchedule.massDates.size;
+    const scheduledCatechism = calendarSchedule.catechismDates.size;
     const catechismDaysOff = Math.min(scheduledCatechism, Math.max(0, requestedDaysOff || 0));
     const effectiveCatechismDays = scheduledCatechism - catechismDaysOff;
     const students = Object.values(state.studentMap)
@@ -989,10 +1060,11 @@ app.get("/monthly-attendance-report", async (req, res) => {
       .map(row => {
         let massPresent = 0;
         let catechismPresent = 0;
-        monthColumns.forEach(({ index }) => {
+        monthColumns.forEach(({ index, date }) => {
+          const dateKey = formatIsoDate(date.year, date.month, date.day);
           const mark = String(row[index] || "").trim().toUpperCase();
-          if (mark.includes("C")) massPresent++;
-          if (mark.includes("G")) catechismPresent++;
+          if (calendarSchedule.massDates.has(dateKey) && mark.includes("C")) massPresent++;
+          if (calendarSchedule.catechismDates.has(dateKey) && mark.includes("G")) catechismPresent++;
         });
         const studentId = String(row[1] || "").trim();
         return {
@@ -1014,11 +1086,132 @@ app.get("/monthly-attendance-report", async (req, res) => {
       scheduledCatechism,
       catechismDaysOff,
       effectiveCatechismDays,
+      calendarNotes: calendarSchedule.notes,
       className,
       students
     });
   } catch (err) {
     console.error("Lỗi báo cáo tháng:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================
+// API: Tổng quan chất lượng theo khoảng thời gian
+// =========================
+app.get("/quality-overview", async (req, res) => {
+  try {
+    const group = getGroup(req);
+    const className = String(req.query.className || "").trim();
+    const requestedStatuses = new Set(
+      String(req.query.statuses || "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean)
+    );
+    const startValue = String(req.query.startDate || ATTENDANCE_CALENDAR.firstAttendanceDay).trim();
+    const endValue = String(req.query.endDate || formatIsoDate(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate())).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startValue) || !/^\d{4}-\d{2}-\d{2}$/.test(endValue) || startValue > endValue) {
+      return res.status(400).json({ success: false, message: "Khoảng ngày không hợp lệ" });
+    }
+
+    await getSheetData(group);
+    const state = getState(group);
+    const startDate = new Date(`${startValue}T00:00:00`);
+    const endDate = new Date(`${endValue}T23:59:59`);
+    const headers = state.cacheData?.[2] || [];
+    const attendanceDates = headers.map((header, index) => {
+      const value = parseAttendanceDateInRange(header, startDate, endDate);
+      if (!value || value < startDate || value > endDate) return null;
+      const key = formatIsoDate(value.getFullYear(), value.getMonth() + 1, value.getDate());
+      const calendar = getDailyAttendanceSchedule(key);
+      return calendar && (calendar.massRequired || calendar.catechismRequired)
+        ? { index, value, key, calendar, month: key.slice(0, 7) }
+        : null;
+    }).filter(Boolean).sort((a, b) => a.value - b.value);
+
+    const students = Object.values(state.studentMap)
+      .filter(row => !className || String(row[3] || "").trim() === className)
+      .filter(row => !requestedStatuses.size || requestedStatuses.has(String(state.statusMap[String(row[1] || "").trim()] || "").trim().toLowerCase()))
+      .map(row => ({
+        row,
+        studentId: String(row[1] || "").trim(),
+        status: String(state.statusMap[String(row[1] || "").trim()] || "").trim()
+      }));
+
+    const months = new Map();
+    const days = attendanceDates.map(item => ({
+      date: item.key,
+      label: `${String(item.value.getDate()).padStart(2, "0")}/${String(item.value.getMonth() + 1).padStart(2, "0")}`,
+      massAbsent: 0,
+      catechismAbsent: 0
+    }));
+    attendanceDates.forEach(item => {
+      if (!months.has(item.month)) {
+        months.set(item.month, { month: item.month, massExpected: 0, massPresent: 0, catechismExpected: 0, catechismPresent: 0 });
+      }
+      const month = months.get(item.month);
+      if (item.calendar.massRequired) month.massExpected += students.length;
+      if (item.calendar.catechismRequired) month.catechismExpected += students.length;
+    });
+
+    const attentionStatuses = new Set(["nghỉ ngang", "nợ bài", "thiếu điểm lễ", "thiếu điểm giáo lý"]);
+    const attentionStudentIds = new Set();
+    const hasThreeConsecutiveAbsences = (student, predicate, symbol) => {
+      let streak = 0;
+      for (const item of attendanceDates) {
+        if (!predicate(item)) continue;
+        if (String(student.row[item.index] || "").toUpperCase().includes(symbol)) streak = 0;
+        else streak += 1;
+        if (streak >= 3) return true;
+      }
+      return false;
+    };
+
+    students.forEach(student => {
+      if (attentionStatuses.has(student.status.toLowerCase()) ||
+        hasThreeConsecutiveAbsences(student, item => item.calendar.massRequired, "C") ||
+        hasThreeConsecutiveAbsences(student, item => item.calendar.catechismRequired, "G")) {
+        attentionStudentIds.add(student.studentId);
+      }
+
+      attendanceDates.forEach((item, index) => {
+        const mark = String(student.row[item.index] || "").trim().toUpperCase();
+        const month = months.get(item.month);
+        if (item.calendar.massRequired) {
+          if (mark.includes("C")) month.massPresent += 1;
+          else days[index].massAbsent += 1;
+        }
+        if (item.calendar.catechismRequired) {
+          if (mark.includes("G")) month.catechismPresent += 1;
+          else days[index].catechismAbsent += 1;
+        }
+      });
+    });
+
+    const monthly = [...months.values()].map(item => ({
+      ...item,
+      massRate: item.massExpected ? Math.round(item.massPresent * 1000 / item.massExpected) / 10 : null,
+      catechismRate: item.catechismExpected ? Math.round(item.catechismPresent * 1000 / item.catechismExpected) / 10 : null
+    }));
+    const totalMassExpected = monthly.reduce((sum, item) => sum + item.massExpected, 0);
+    const totalMassPresent = monthly.reduce((sum, item) => sum + item.massPresent, 0);
+    const totalCatechismExpected = monthly.reduce((sum, item) => sum + item.catechismExpected, 0);
+    const totalCatechismPresent = monthly.reduce((sum, item) => sum + item.catechismPresent, 0);
+
+    return res.json({
+      success: true,
+      filters: { startDate: startValue, endDate: endValue, className, statuses: [...requestedStatuses] },
+      summary: {
+        students: students.length,
+        massRate: totalMassExpected ? Math.round(totalMassPresent * 1000 / totalMassExpected) / 10 : null,
+        catechismRate: totalCatechismExpected ? Math.round(totalCatechismPresent * 1000 / totalCatechismExpected) / 10 : null,
+        massAbsent: Math.max(0, totalMassExpected - totalMassPresent),
+        catechismAbsent: Math.max(0, totalCatechismExpected - totalCatechismPresent),
+        attentionCount: attentionStudentIds.size
+      },
+      monthly,
+      trend: days
+    });
+  } catch (err) {
+    console.error("Lỗi tổng quan chất lượng:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -1304,6 +1497,8 @@ app.get("/attendance-report", async (req, res) => {
 
         const date =
             String(req.query.date || "").trim();
+        const dateIso =
+            String(req.query.dateIso || "").trim();
 
         if (!date) {
             return res.status(400).json({
@@ -1311,6 +1506,7 @@ app.get("/attendance-report", async (req, res) => {
                 message: "Thiếu ngày"
             });
         }
+        const calendar = getDailyAttendanceSchedule(dateIso);
 
         const sheets =
             await getSheetsClient();
@@ -1386,7 +1582,8 @@ app.get("/attendance-report", async (req, res) => {
         res.json({
             success: true,
             total: students.length,
-            students
+            students,
+            calendar
         });
 
     } catch (err) {
