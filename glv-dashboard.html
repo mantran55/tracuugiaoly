@@ -2032,15 +2032,27 @@
 
             
 
-            const res = await fetch(api('/classes'));
-            const classes = await res.json();
-
             const select = document.getElementById("attendanceClass");
-            select.innerHTML = "";
+            select.innerHTML = '<option value="">Đang tải lớp...</option>';
+            select.disabled = true;
 
-            classes.forEach(cls => {
-                select.innerHTML += `<option value="${cls.id}">${cls.name}</option>`;
-            });
+            try {
+                const res = await fetch(api('/classes'));
+                const classes = await res.json().catch(() => null);
+                if (!res.ok || !Array.isArray(classes)) {
+                    throw new Error(classes?.error || 'Không thể tải danh sách lớp');
+                }
+                if (!classes.length) throw new Error('Chưa có lớp CCAMS được cấu hình cho tài khoản này');
+
+                select.innerHTML = classes.map(cls =>
+                    `<option value="${escapeHtml(String(cls.id || ''))}">${escapeHtml(String(cls.name || cls.id || 'Lớp chưa có tên'))}</option>`
+                ).join('');
+            } catch (error) {
+                select.innerHTML = '<option value="">Chưa tải được lớp</option>';
+                showToast(error.message || 'Không thể tải danh sách lớp');
+            } finally {
+                select.disabled = false;
+            }
         }
 
         async function loadAttendanceLastUpdated() {
