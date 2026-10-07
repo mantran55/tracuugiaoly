@@ -5535,6 +5535,24 @@ button.btn-leave {
     padding-bottom: 32px;
 }
 
+.attendance-manual-mode-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:100%;
+    margin-top:9px;
+    border:1px solid #fdba74;
+    border-radius:10px;
+    padding:11px;
+    background:#fff7ed;
+    color:#c2410c;
+    font-weight:800;
+    cursor:pointer;
+}
+.attendance-manual-mode-button:hover { background:#ffedd5; }
+.attendance-manual-mode-button .material-icons-round { font-size:19px; }
+
 /* === ĐƠN PHÉP === */
 .leave-modal {
     width: min(620px, 95vw);
