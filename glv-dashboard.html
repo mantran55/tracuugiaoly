@@ -95,31 +95,6 @@
             </div>
         </div>
 
-        <section class="section quality-overview-section" id="qualityOverviewSection">
-            <div class="section-header">
-                <div class="section-title"><span class="material-icons-round">insights</span>Tổng Quan Chất Lượng</div>
-                <div class="section-line"></div>
-                <div class="section-count" id="qualityOverviewPeriod">Đang tải…</div>
-            </div>
-            <div class="quality-overview-filters">
-                <select id="qualityOverviewClass" aria-label="Lọc lớp tổng quan"></select>
-                <select id="qualityOverviewStatus" aria-label="Lọc tình trạng tổng quan">
-                    <option value="">Tất cả tình trạng</option>
-                    <option value="đang học">Đang học</option>
-                    <option value="nghỉ ngang">Nghỉ ngang</option>
-                    <option value="nghỉ từ đầu">Nghỉ từ đầu</option>
-                    <option value="chuyển xứ">Chuyển xứ</option>
-                    <option value="nợ bài">Nợ bài</option>
-                    <option value="thiếu điểm lễ">Thiếu điểm lễ</option>
-                    <option value="thiếu điểm giáo lý">Thiếu điểm giáo lý</option>
-                </select>
-                <label><span>Từ ngày</span><input id="qualityOverviewStart" type="date"></label>
-                <label><span>Đến ngày</span><input id="qualityOverviewEnd" type="date"></label>
-                <button type="button" class="quality-overview-apply" onclick="loadQualityOverview()"><span class="material-icons-round">filter_alt</span>Cập nhật</button>
-            </div>
-            <div id="qualityOverviewContent" class="quality-overview-content"><div class="quality-overview-loading">Đang tổng hợp dữ liệu chuyên cần…</div></div>
-        </section>
-
         <!-- ================= TOP 5 HỌC VIÊN XUẤT SẮC ================= -->
         <section class="section top-students-section" id="topStudentsSection" hidden>
             <div class="section-header">
@@ -734,8 +709,6 @@
                 loadClassFilter();
                 filterStudents();
                 renderTopStudents();
-                setupQualityOverviewFilters();
-                loadQualityOverview();
             } catch (err) {
                 console.error(err);
                 const tbody = document.getElementById('studentTable');
@@ -807,115 +780,6 @@
 
             const classes = [...new Set(allStudents.map(x => x.className))];
             document.getElementById('totalClasses').textContent = classes.length;
-        }
-
-        let qualityOverviewInitialized = false;
-
-        function setupQualityOverviewFilters() {
-            const classSelect = document.getElementById('qualityOverviewClass');
-            if (!classSelect) return;
-            const currentClass = classSelect.value;
-            const classes = [...new Set(allStudents.map(student => student.className).filter(Boolean))]
-                .sort((a, b) => a.localeCompare(b, 'vi'));
-            classSelect.innerHTML = '<option value="">Tất cả lớp</option>' + classes
-                .map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
-            if (classes.includes(currentClass)) classSelect.value = currentClass;
-
-            if (!qualityOverviewInitialized) {
-                const today = new Date();
-                const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                document.getElementById('qualityOverviewStart').value = '2026-09-14';
-                document.getElementById('qualityOverviewEnd').value = todayValue < '2026-09-14' ? '2026-09-14' : todayValue;
-                qualityOverviewInitialized = true;
-            }
-        }
-
-        function formatOverviewMonth(value) {
-            const [year, month] = String(value || '').split('-');
-            return year && month ? `T${Number(month)}/${year.slice(2)}` : value;
-        }
-
-        function formatOverviewDate(value) {
-            const [year, month, day] = String(value || '').split('-');
-            return year && month && day ? `${day}/${month}/${year}` : value;
-        }
-
-        function renderQualityTrend(trend) {
-            if (!trend.length) return '<div class="quality-chart-empty">Chưa có ngày điểm danh trong khoảng đã chọn.</div>';
-            const width = 760;
-            const height = 220;
-            const padding = { top: 20, right: 18, bottom: 34, left: 34 };
-            const chartWidth = width - padding.left - padding.right;
-            const chartHeight = height - padding.top - padding.bottom;
-            const maximum = Math.max(1, ...trend.flatMap(item => [item.massAbsent, item.catechismAbsent]));
-            const point = (value, index) => {
-                const x = padding.left + (trend.length === 1 ? chartWidth / 2 : index * chartWidth / (trend.length - 1));
-                const y = padding.top + chartHeight - (value / maximum) * chartHeight;
-                return `${x.toFixed(1)},${y.toFixed(1)}`;
-            };
-            const massPoints = trend.map((item, index) => point(item.massAbsent, index)).join(' ');
-            const catechismPoints = trend.map((item, index) => point(item.catechismAbsent, index)).join(' ');
-            const labelIndexes = [...new Set([0, Math.floor((trend.length - 1) / 2), trend.length - 1])];
-            return `<svg class="quality-trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Xu hướng vắng theo ngày">
-                <line x1="${padding.left}" y1="${padding.top + chartHeight}" x2="${width - padding.right}" y2="${padding.top + chartHeight}" class="quality-axis" />
-                <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartHeight}" class="quality-axis" />
-                <text x="4" y="${padding.top + 7}" class="quality-axis-label">${maximum}</text>
-                <text x="13" y="${padding.top + chartHeight}" class="quality-axis-label">0</text>
-                <polyline points="${massPoints}" class="quality-line quality-line-mass" />
-                <polyline points="${catechismPoints}" class="quality-line quality-line-catechism" />
-                ${trend.map((item, index) => `${item.massAbsent ? `<circle cx="${point(item.massAbsent, index).split(',')[0]}" cy="${point(item.massAbsent, index).split(',')[1]}" r="3" class="quality-dot quality-dot-mass"><title>${escapeHtml(item.label)}: ${item.massAbsent} vắng TL</title></circle>` : ''}${item.catechismAbsent ? `<circle cx="${point(item.catechismAbsent, index).split(',')[0]}" cy="${point(item.catechismAbsent, index).split(',')[1]}" r="3" class="quality-dot quality-dot-catechism"><title>${escapeHtml(item.label)}: ${item.catechismAbsent} vắng GL</title></circle>` : ''}`).join('')}
-                ${labelIndexes.map(index => `<text x="${point(0, index).split(',')[0]}" y="${height - 8}" text-anchor="middle" class="quality-axis-label">${escapeHtml(trend[index].label)}</text>`).join('')}
-            </svg>`;
-        }
-
-        function renderQualityOverview(data) {
-            const container = document.getElementById('qualityOverviewContent');
-            const period = document.getElementById('qualityOverviewPeriod');
-            const summary = data.summary || {};
-            const monthly = data.monthly || [];
-            period.textContent = `${formatOverviewDate(data.filters.startDate)} – ${formatOverviewDate(data.filters.endDate)}`;
-            const rate = value => value === null || value === undefined ? '—' : `${value}%`;
-            container.innerHTML = `
-                <div class="quality-kpis">
-                    <div class="quality-kpi mass"><span class="material-icons-round">church</span><div><small>Chuyên cần Thánh lễ</small><strong>${rate(summary.massRate)}</strong><em>${summary.massAbsent || 0} lượt vắng</em></div></div>
-                    <div class="quality-kpi catechism"><span class="material-icons-round">menu_book</span><div><small>Chuyên cần Giáo lý</small><strong>${rate(summary.catechismRate)}</strong><em>${summary.catechismAbsent || 0} lượt vắng</em></div></div>
-                    <div class="quality-kpi attention"><span class="material-icons-round">priority_high</span><div><small>Cần quan tâm</small><strong>${summary.attentionCount || 0}</strong><em>trên ${summary.students || 0} học viên</em></div></div>
-                </div>
-                <div class="quality-charts-grid">
-                    <article class="quality-chart-card">
-                        <div class="quality-chart-heading"><div><span class="material-icons-round">bar_chart</span>Chuyên cần theo tháng</div><small>TL / GL</small></div>
-                        <div class="quality-bars">${monthly.length ? monthly.map(item => `<div class="quality-bar-row"><span>${escapeHtml(formatOverviewMonth(item.month))}</span><div class="quality-bar-track"><i class="quality-bar-mass" style="width:${Math.max(0, item.massRate || 0)}%"></i><i class="quality-bar-catechism" style="width:${Math.max(0, item.catechismRate || 0)}%"></i></div><b>${rate(item.massRate)} <em>/</em> ${rate(item.catechismRate)}</b></div>`).join('') : '<div class="quality-chart-empty">Chưa có dữ liệu điểm danh.</div>'}</div>
-                        <div class="quality-legend"><span><i class="quality-legend-mass"></i>Thánh lễ</span><span><i class="quality-legend-catechism"></i>Giáo lý</span></div>
-                    </article>
-                    <article class="quality-chart-card">
-                        <div class="quality-chart-heading"><div><span class="material-icons-round">show_chart</span>Xu hướng vắng</div><small>theo ngày</small></div>
-                        <div class="quality-trend-wrap">${renderQualityTrend(data.trend || [])}</div>
-                        <div class="quality-legend"><span><i class="quality-legend-mass"></i>Vắng Thánh lễ</span><span><i class="quality-legend-catechism"></i>Vắng Giáo lý</span></div>
-                    </article>
-                </div>`;
-        }
-
-        async function loadQualityOverview() {
-            const container = document.getElementById('qualityOverviewContent');
-            const className = document.getElementById('qualityOverviewClass').value;
-            const status = document.getElementById('qualityOverviewStatus').value;
-            const startDate = document.getElementById('qualityOverviewStart').value;
-            const endDate = document.getElementById('qualityOverviewEnd').value;
-            if (!startDate || !endDate || startDate > endDate) {
-                showToast('Vui lòng chọn khoảng ngày hợp lệ');
-                return;
-            }
-            container.innerHTML = '<div class="quality-overview-loading">Đang tổng hợp dữ liệu chuyên cần…</div>';
-            try {
-                const query = new URLSearchParams({ startDate, endDate, className });
-                if (status) query.set('statuses', status);
-                const response = await fetch(api(`/quality-overview?${query.toString()}`));
-                const data = await response.json();
-                if (!response.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tải tổng quan');
-                renderQualityOverview(data);
-            } catch (error) {
-                container.innerHTML = `<div class="quality-overview-loading quality-overview-error">${escapeHtml(error.message)}</div>`;
-            }
         }
 
         // ============================================================
