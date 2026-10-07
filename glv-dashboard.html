@@ -424,7 +424,13 @@
     <!-- ================= MODAL: LẤY ĐIỂM DANH (IMPORT) ================= -->
     <div id="attendanceModal" class="modal-overlay hidden">
         <div class="modal-content attendance-modal">
-            <button class="modal-close" onclick="closeAttendanceModal()">✕</button>
+            <div class="attendance-modal-actions">
+                <button type="button" class="attendance-header-action" onclick="closeAttendanceModal(); openManualAttendanceModal()">
+                    <span class="material-icons-round">content_paste</span>
+                    Thủ công
+                </button>
+                <button class="modal-close" onclick="closeAttendanceModal()">✕</button>
+            </div>
 
             <div class="student-header">
                 <h2>Lấy điểm danh CCAMS</h2>
@@ -451,10 +457,6 @@
                 <button onclick="importAttendance()" style="margin-top:16px">
                     Tiến hành lấy điểm danh
                 </button>
-                <button type="button" class="attendance-manual-mode-button" onclick="closeAttendanceModal(); openManualAttendanceModal()">
-                    <span class="material-icons-round">content_paste</span>
-                    Nhập thủ công từ TINI
-                </button>
 
                 <div id="attendanceLastUpdated" class="attendance-last-updated">
                     Đang tải mốc cập nhật...
@@ -469,7 +471,13 @@
     <!-- ================= MODAL: NHẬP ĐIỂM DANH THỦ CÔNG ================= -->
     <div id="manualAttendanceModal" class="modal-overlay hidden">
         <div class="modal-content attendance-modal manual-attendance-modal">
-            <button class="modal-close" onclick="closeManualAttendanceModal()">✕</button>
+            <div class="attendance-modal-actions">
+                <button type="button" class="attendance-header-action attendance-back-action" onclick="returnToAttendanceModal()" aria-label="Quay lại lấy điểm danh">
+                    <span class="material-icons-round">arrow_back</span>
+                    Quay lại
+                </button>
+                <button class="modal-close" onclick="closeManualAttendanceModal()">✕</button>
+            </div>
             <div class="student-header">
                 <h2>Nhập điểm danh thủ công</h2>
             </div>
@@ -667,6 +675,12 @@
 
         function closeManualAttendanceModal() {
             document.getElementById('manualAttendanceModal').classList.add('hidden');
+        }
+
+        function returnToAttendanceModal() {
+            const { date, classId } = manualAttendanceRetryContext;
+            closeManualAttendanceModal();
+            openAttendanceModal({ date, classId });
         }
 
         async function submitManualAttendance() {

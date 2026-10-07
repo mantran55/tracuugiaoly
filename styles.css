@@ -5535,23 +5535,43 @@ button.btn-leave {
     padding-bottom: 32px;
 }
 
-.attendance-manual-mode-button {
+.attendance-modal .attendance-modal-actions {
+    position:absolute;
+    top:12px;
+    right:14px;
+    z-index:12;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.attendance-modal .attendance-modal-actions .modal-close {
+    position:static;
+    flex:0 0 auto;
+}
+.attendance-header-action {
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:6px;
-    width:100%;
-    margin-top:9px;
-    border:1px solid #fdba74;
+    min-height:36px;
+    border:1px solid rgba(255,255,255,.42);
     border-radius:10px;
-    padding:11px;
-    background:#fff7ed;
-    color:#c2410c;
+    padding:0 10px;
+    background:rgba(255,255,255,.15);
+    color:#fff;
+    font-size:12px;
     font-weight:800;
     cursor:pointer;
 }
-.attendance-manual-mode-button:hover { background:#ffedd5; }
-.attendance-manual-mode-button .material-icons-round { font-size:19px; }
+.attendance-header-action:hover { background:rgba(255,255,255,.28); }
+.attendance-header-action .material-icons-round { font-size:18px; }
+.manual-attendance-modal .student-header h2::before { content:'content_paste'; }
+
+@media screen and (max-width:600px) {
+    .attendance-modal .attendance-modal-actions { top:10px; right:10px; gap:6px; }
+    .attendance-header-action { min-height:34px; padding:0 8px; font-size:10px; }
+    .attendance-header-action .material-icons-round { font-size:16px; }
+}
 
 /* === ĐƠN PHÉP === */
 .leave-modal {
