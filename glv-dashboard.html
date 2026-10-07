@@ -12,12 +12,19 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260921-quality-overview">
+    <link rel="stylesheet" href="styles.css?v=20261007-status-loader">
 </head>
 
 <body class="dashboard-page">
     <div class="bg-decor"></div>
     <div class="bg-grid"></div>
+    <div class="dashboard-bootstrap-loader" id="dashboardBootstrapLoader" role="status" aria-live="polite">
+        <div class="dashboard-loader-card">
+            <div class="dashboard-loader-cross" aria-hidden="true"></div>
+            <strong>Đang mở Dashboard</strong>
+            <span>Đang tải danh sách học viên…</span>
+        </div>
+    </div>
 
     <div class="toast" id="toast">
         <span class="material-icons-round" id="toastIcon" style="font-size:18px;">warning</span>
@@ -566,18 +573,34 @@
         // ============================================================
         // KHỞI TẠO
         // ============================================================
-        async function initializeDashboard() {
+        function hideDashboardBootstrapLoader() {
+            document.getElementById('dashboardBootstrapLoader')?.classList.add('is-ready');
+        }
+
+        async function syncMassStatusesInBackground() {
             try {
                 const response = await fetch(api('/sync-mass-statuses'), { method: 'POST' });
                 const data = await response.json().catch(() => null);
                 if (!response.ok || !data?.success) {
                     console.warn('Chưa thể tự cập nhật tình trạng:', data?.error || response.status);
+                    return;
                 }
+                // Chỉ lấy lại bảng nếu Sheet vừa thực sự thay đổi.
+                if (Number(data.updated || 0) > 0) await loadStudents();
             } catch (error) {
-                // Vẫn mở được Dashboard nếu Google Sheet tạm thời không phản hồi.
                 console.warn('Chưa thể tự cập nhật tình trạng:', error);
             }
-            await Promise.all([loadStudents(), loadTodayAttendance()]);
+        }
+
+        async function initializeDashboard() {
+            try {
+                // Hiện dữ liệu/tình trạng đang có trước để vào Dashboard ngay.
+                await Promise.all([loadStudents(), loadTodayAttendance()]);
+            } finally {
+                hideDashboardBootstrapLoader();
+            }
+            // Việc xét thiếu điểm lễ diễn ra sau đó, không chặn giao diện.
+            syncMassStatusesInBackground();
         }
 
         initializeDashboard();

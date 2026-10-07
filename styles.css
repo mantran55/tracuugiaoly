@@ -5567,6 +5567,16 @@ button.btn-leave {
 .quality-overview-content { min-height:120px; }
 .quality-overview-loading { padding:34px 15px; border:1px dashed #bfdbfe; border-radius:14px; color:#1d4ed8; text-align:center; font-size:13px; font-weight:750; }
 .quality-overview-error { color:#b91c1c; border-color:#fecaca; background:#fff7f7; }
+.dashboard-bootstrap-loader { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; padding:24px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); backdrop-filter:blur(10px); transition:opacity .28s ease,visibility .28s ease; }
+.dashboard-bootstrap-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }
+.dashboard-loader-card { width:min(290px,100%); display:grid; justify-items:center; gap:8px; padding:30px 24px 27px; border:1px solid rgba(37,99,235,.18); border-radius:22px; background:rgba(255,255,255,.94); box-shadow:0 20px 52px rgba(30,64,175,.16); color:#183b83; text-align:center; }
+.dashboard-loader-card strong { font-size:16px; font-weight:850; }
+.dashboard-loader-card span { color:#64748b; font-size:12px; font-weight:650; }
+.dashboard-loader-cross { position:relative; width:42px; height:52px; margin-bottom:3px; filter:drop-shadow(0 5px 8px rgba(30,64,175,.23)); }
+.dashboard-loader-cross::before,.dashboard-loader-cross::after { content:""; position:absolute; border-radius:7px; background:linear-gradient(180deg,#3b82f6,#1e3a8a); animation:dashboard-cross-pulse 1.25s ease-in-out infinite; }
+.dashboard-loader-cross::before { width:12px; height:52px; left:15px; top:0; }
+.dashboard-loader-cross::after { width:42px; height:12px; left:0; top:15px; animation-delay:.12s; }
+@keyframes dashboard-cross-pulse { 0%,100% { transform:scale(1); opacity:.72; } 50% { transform:scale(1.08); opacity:1; } }
 .quality-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-bottom:13px; }
 .quality-kpi { display:flex; align-items:center; gap:12px; min-width:0; padding:15px; border:1px solid; border-radius:15px; background:#fff; box-shadow:0 8px 20px rgba(30,64,175,.06); }
 .quality-kpi > .material-icons-round { display:grid; width:42px; height:42px; flex:0 0 42px; place-items:center; border-radius:12px; font-size:23px; }
