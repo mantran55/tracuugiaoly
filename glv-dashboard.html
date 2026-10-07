@@ -566,8 +566,21 @@
         // ============================================================
         // KHỞI TẠO
         // ============================================================
-        loadStudents();
-        loadTodayAttendance();
+        async function initializeDashboard() {
+            try {
+                const response = await fetch(api('/sync-mass-statuses'), { method: 'POST' });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    console.warn('Chưa thể tự cập nhật tình trạng:', data?.error || response.status);
+                }
+            } catch (error) {
+                // Vẫn mở được Dashboard nếu Google Sheet tạm thời không phản hồi.
+                console.warn('Chưa thể tự cập nhật tình trạng:', error);
+            }
+            await Promise.all([loadStudents(), loadTodayAttendance()]);
+        }
+
+        initializeDashboard();
 
         document.getElementById('searchForm').addEventListener('submit', handleSearchSubmit);
 
