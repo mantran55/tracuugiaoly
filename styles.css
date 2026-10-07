@@ -5496,6 +5496,9 @@ button.btn-leave {
 .attendance-import-manual { display:inline-flex; align-items:center; gap:4px; border:1px solid #fdba74; border-radius:8px; padding:6px 8px; background:#fff; color:#c2410c; font-size:10px; font-weight:800; cursor:pointer; }
 .attendance-import-manual:hover { background:#ffedd5; }
 .attendance-import-manual .material-icons-round { font-size:15px; }
+.attendance-import-dismiss { display:inline-flex; align-items:center; gap:4px; border:1px solid #86efac; border-radius:8px; padding:6px 8px; background:#f0fdf4; color:#15803d; font-size:10px; font-weight:800; cursor:pointer; }
+.attendance-import-dismiss:hover { background:#dcfce7; }
+.attendance-import-dismiss .material-icons-round { font-size:15px; }
 .manual-attendance-help { margin:0 0 12px; color:#64748b; font-size:13px; line-height:1.55; }
 .manual-attendance-context { margin:0 0 10px; padding:9px 11px; border-radius:9px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; font-size:12px; font-weight:750; }
 .manual-attendance-source-controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 10px; }
@@ -5523,7 +5526,8 @@ button.btn-leave {
     .attendance-import-actions { grid-column:2; grid-row:1; gap:4px; }
     .attendance-import-retry { padding:6px 7px; font-size:9px; }
     .attendance-import-manual { padding:5px 6px; font-size:9px; }
-    .attendance-import-retry .material-icons-round, .attendance-import-manual .material-icons-round { font-size:14px; }
+    .attendance-import-dismiss { padding:5px 6px; font-size:9px; }
+    .attendance-import-retry .material-icons-round, .attendance-import-manual .material-icons-round, .attendance-import-dismiss .material-icons-round { font-size:14px; }
     .manual-attendance-input { min-height:210px; font-size:11px; }
     .manual-attendance-source-controls { gap:8px; }
     .manual-attendance-source-controls input, .manual-attendance-source-controls select { min-height:38px; font-size:12px; }

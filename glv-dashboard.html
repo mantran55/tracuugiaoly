@@ -647,6 +647,9 @@
                         <button type="button" class="attendance-import-manual" data-date="${escapeHtml(item.date)}" data-class-id="${escapeHtml(item.classId)}" onclick="openManualAttendanceModal(this.dataset.date, this.dataset.classId)">
                             <span class="material-icons-round">content_paste</span>Thủ công
                         </button>
+                        <button type="button" class="attendance-import-dismiss" data-date="${escapeHtml(item.date)}" data-class-id="${escapeHtml(item.classId)}" onclick="dismissAttendanceImportError(this.dataset.date, this.dataset.classId)">
+                            <span class="material-icons-round">done</span>Đã xử lý
+                        </button>
                     </span>
                 </li>`).join('');
             alert.innerHTML = `
@@ -672,6 +675,22 @@
 
         function retryFailedAttendance(date, classId) {
             openAttendanceModal({ date, classId });
+        }
+
+        async function dismissAttendanceImportError(date, classId) {
+            try {
+                const response = await fetch(api('/attendance-import-errors/dismiss'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, classId })
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) throw new Error(data?.error || 'Không thể xóa thông báo');
+                await loadAttendanceImportErrors();
+                showToast('Đã xóa thông báo điểm danh', 'success');
+            } catch (error) {
+                showToast(error.message || 'Không thể xóa thông báo');
+            }
         }
 
         let manualAttendanceRetryContext = { date: '', classId: '' };
