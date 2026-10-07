@@ -462,6 +462,25 @@
         </div>
     </div>
 
+    <!-- ================= MODAL: NHẬP ĐIỂM DANH THỦ CÔNG ================= -->
+    <div id="manualAttendanceModal" class="modal-overlay hidden">
+        <div class="modal-content attendance-modal manual-attendance-modal">
+            <button class="modal-close" onclick="closeManualAttendanceModal()">✕</button>
+            <div class="student-header">
+                <h2>Nhập điểm danh thủ công</h2>
+            </div>
+            <div class="attendance-body">
+                <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ và Giáo lý</strong>; dòng “Khác” sẽ bỏ qua.</p>
+                <div id="manualAttendanceContext" class="manual-attendance-context" hidden></div>
+                <textarea id="manualAttendanceContent" class="manual-attendance-input" placeholder="Dán nội dung danh sách điểm danh vào đây..."></textarea>
+                <button type="button" class="manual-attendance-submit" onclick="submitManualAttendance()">
+                    <span class="material-icons-round">save</span>Ghi điểm danh vào Sheet
+                </button>
+                <div id="manualAttendanceResult" class="manual-attendance-result"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= MODAL: DANH SÁCH ĐIỂM DANH HÔM NAY ================= -->
     <div id="attendanceListModal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -593,9 +612,14 @@
                         <span>${escapeHtml(item.classId)}</span>
                     </div>
                     <span class="attendance-import-error-message">${escapeHtml(item.error || 'Không thể lấy điểm danh')}</span>
-                    <button type="button" class="attendance-import-retry" data-date="${escapeHtml(item.date)}" data-class-id="${escapeHtml(item.classId)}" onclick="retryFailedAttendance(this.dataset.date, this.dataset.classId)">
-                        <span class="material-icons-round">restart_alt</span>Lấy lại
-                    </button>
+                    <span class="attendance-import-actions">
+                        <button type="button" class="attendance-import-retry" data-date="${escapeHtml(item.date)}" data-class-id="${escapeHtml(item.classId)}" onclick="retryFailedAttendance(this.dataset.date, this.dataset.classId)">
+                            <span class="material-icons-round">restart_alt</span>Lấy lại
+                        </button>
+                        <button type="button" class="attendance-import-manual" data-date="${escapeHtml(item.date)}" data-class-id="${escapeHtml(item.classId)}" onclick="openManualAttendanceModal(this.dataset.date, this.dataset.classId)">
+                            <span class="material-icons-round">content_paste</span>Thủ công
+                        </button>
+                    </span>
                 </li>`).join('');
             alert.innerHTML = `
                 <div class="attendance-import-alert-icon"><span class="material-icons-round">warning_amber</span></div>
@@ -620,6 +644,58 @@
 
         function retryFailedAttendance(date, classId) {
             openAttendanceModal({ date, classId });
+        }
+
+        let manualAttendanceRetryContext = { date: '', classId: '' };
+
+        function openManualAttendanceModal(date = '', classId = '') {
+            manualAttendanceRetryContext = { date: String(date || ''), classId: String(classId || '') };
+            const context = document.getElementById('manualAttendanceContext');
+            context.hidden = !manualAttendanceRetryContext.date;
+            context.textContent = manualAttendanceRetryContext.date
+                ? `Đang xử lý lại ngày ${formatAttendanceErrorDate(manualAttendanceRetryContext.date)} · ${manualAttendanceRetryContext.classId}`
+                : '';
+            document.getElementById('manualAttendanceContent').value = '';
+            document.getElementById('manualAttendanceResult').textContent = '';
+            document.getElementById('manualAttendanceModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('manualAttendanceContent').focus(), 0);
+        }
+
+        function closeManualAttendanceModal() {
+            document.getElementById('manualAttendanceModal').classList.add('hidden');
+        }
+
+        async function submitManualAttendance() {
+            const input = document.getElementById('manualAttendanceContent');
+            const button = document.querySelector('.manual-attendance-submit');
+            const result = document.getElementById('manualAttendanceResult');
+            const content = input.value.trim();
+            if (!content) {
+                showToast('Hãy dán danh sách điểm danh trước');
+                return;
+            }
+            button.disabled = true;
+            result.textContent = 'Đang phân tích và ghi vào Google Sheet…';
+            try {
+                const response = await fetch(api('/import-attendance-manual'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content,
+                        retryDate: manualAttendanceRetryContext.date,
+                        retryClassId: manualAttendanceRetryContext.classId
+                    })
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) throw new Error(data?.error || 'Không thể ghi điểm danh thủ công');
+                result.textContent = `Đã ghi ${data.updated} lượt từ ${data.parsed} dòng nhận diện${data.skipped ? ` · bỏ qua ${data.skipped} dòng không khớp` : ''}.`;
+                input.value = '';
+                await Promise.all([loadStudents(), loadTodayAttendance(), loadAttendanceImportErrors()]);
+            } catch (error) {
+                result.textContent = error.message || 'Không thể ghi điểm danh thủ công';
+            } finally {
+                button.disabled = false;
+            }
         }
 
         async function initializeDashboard() {

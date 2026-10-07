@@ -5492,6 +5492,17 @@ button.btn-leave {
 .attendance-import-retry { display:inline-flex; align-items:center; gap:4px; border:0; border-radius:8px; padding:7px 10px; background:#ea580c; color:#fff; font-size:11px; font-weight:800; cursor:pointer; }
 .attendance-import-retry:hover { background:#c2410c; }
 .attendance-import-retry .material-icons-round { font-size:16px; }
+.attendance-import-actions { display:inline-flex; align-items:center; gap:6px; }
+.attendance-import-manual { display:inline-flex; align-items:center; gap:4px; border:1px solid #fdba74; border-radius:8px; padding:6px 8px; background:#fff; color:#c2410c; font-size:10px; font-weight:800; cursor:pointer; }
+.attendance-import-manual:hover { background:#ffedd5; }
+.attendance-import-manual .material-icons-round { font-size:15px; }
+.manual-attendance-help { margin:0 0 12px; color:#64748b; font-size:13px; line-height:1.55; }
+.manual-attendance-context { margin:0 0 10px; padding:9px 11px; border-radius:9px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; font-size:12px; font-weight:750; }
+.manual-attendance-input { display:block; box-sizing:border-box; width:100%; min-height:250px; resize:vertical; padding:12px; border:1px solid #cbd5e1; border-radius:10px; color:#1e293b; font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.manual-attendance-input:focus { outline:0; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+.manual-attendance-submit { display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:12px; border:0; border-radius:10px; padding:12px; background:#1d4ed8; color:#fff; font-weight:800; cursor:pointer; }
+.manual-attendance-submit:disabled { opacity:.65; cursor:wait; }
+.manual-attendance-result { min-height:20px; margin-top:10px; color:#166534; font-size:12px; font-weight:700; line-height:1.5; }
 
 @media screen and (max-width:600px) {
     .attendance-import-alert { gap:9px; margin:12px 0 16px; padding:11px; border-left-width:4px; border-radius:11px; }
@@ -5501,7 +5512,11 @@ button.btn-leave {
     .attendance-import-alert-content > p { margin:2px 0 7px; font-size:10.5px; }
     .attendance-import-error-list li { grid-template-columns:1fr auto; gap:4px 8px; padding:7px 8px; }
     .attendance-import-error-message { grid-column:1 / -1; font-size:10px; }
-    .attendance-import-retry { grid-column:2; grid-row:1; padding:6px 8px; font-size:10px; }
+    .attendance-import-actions { grid-column:2; grid-row:1; gap:4px; }
+    .attendance-import-retry { padding:6px 7px; font-size:9px; }
+    .attendance-import-manual { padding:5px 6px; font-size:9px; }
+    .attendance-import-retry .material-icons-round, .attendance-import-manual .material-icons-round { font-size:14px; }
+    .manual-attendance-input { min-height:210px; font-size:11px; }
 }
 
 /* Giữ tiêu đề modal cố định, chỉ cuộn phần nội dung/kết quả. */
