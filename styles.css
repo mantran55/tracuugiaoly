@@ -5498,6 +5498,14 @@ button.btn-leave {
 .attendance-import-manual .material-icons-round { font-size:15px; }
 .manual-attendance-help { margin:0 0 12px; color:#64748b; font-size:13px; line-height:1.55; }
 .manual-attendance-context { margin:0 0 10px; padding:9px 11px; border-radius:9px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; font-size:12px; font-weight:750; }
+.manual-attendance-source-controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 10px; }
+.manual-attendance-source-controls label { display:grid; gap:5px; color:#334155; font-size:12px; font-weight:800; }
+.manual-attendance-source-controls label:last-child { grid-column:1 / -1; }
+.manual-attendance-source-controls input, .manual-attendance-source-controls select { box-sizing:border-box; width:100%; min-height:40px; border:1px solid #cbd5e1; border-radius:9px; padding:0 10px; background:#fff; color:#1e293b; font-size:13px; }
+.manual-attendance-tini-link { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; box-sizing:border-box; margin:0 0 12px; padding:10px; border:1px solid #93c5fd; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12px; font-weight:800; text-decoration:none; }
+.manual-attendance-tini-link:hover { background:#dbeafe; }
+.manual-attendance-tini-link.is-disabled { opacity:.55; pointer-events:none; }
+.manual-attendance-tini-link .material-icons-round { font-size:17px; }
 .manual-attendance-input { display:block; box-sizing:border-box; width:100%; min-height:250px; resize:vertical; padding:12px; border:1px solid #cbd5e1; border-radius:10px; color:#1e293b; font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
 .manual-attendance-input:focus { outline:0; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
 .manual-attendance-submit { display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:12px; border:0; border-radius:10px; padding:12px; background:#1d4ed8; color:#fff; font-weight:800; cursor:pointer; }
@@ -5517,6 +5525,8 @@ button.btn-leave {
     .attendance-import-manual { padding:5px 6px; font-size:9px; }
     .attendance-import-retry .material-icons-round, .attendance-import-manual .material-icons-round { font-size:14px; }
     .manual-attendance-input { min-height:210px; font-size:11px; }
+    .manual-attendance-source-controls { gap:8px; }
+    .manual-attendance-source-controls input, .manual-attendance-source-controls select { min-height:38px; font-size:12px; }
 }
 
 /* Giữ tiêu đề modal cố định, chỉ cuộn phần nội dung/kết quả. */

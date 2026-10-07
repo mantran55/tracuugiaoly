@@ -484,6 +484,22 @@
             <div class="attendance-body">
                 <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ và Giáo lý</strong>; dòng “Khác” sẽ bỏ qua.</p>
                 <div id="manualAttendanceContext" class="manual-attendance-context" hidden></div>
+                <div class="manual-attendance-source-controls">
+                    <label>Từ ngày
+                        <input type="date" id="manualFromDate" onchange="updateManualAttendanceTiniLink()">
+                    </label>
+                    <label>Đến ngày
+                        <input type="date" id="manualToDate" onchange="updateManualAttendanceTiniLink()">
+                    </label>
+                    <label>Lớp
+                        <select id="manualAttendanceClass" onchange="updateManualAttendanceTiniLink()">
+                            <option value="">Chọn lớp</option>
+                        </select>
+                    </label>
+                </div>
+                <a id="manualAttendanceTiniLink" class="manual-attendance-tini-link is-disabled" href="#" target="_blank" rel="noopener" aria-disabled="true">
+                    <span class="material-icons-round">open_in_new</span>Mở danh sách điểm danh trên TINI
+                </a>
                 <textarea id="manualAttendanceContent" class="manual-attendance-input" placeholder="Dán nội dung danh sách điểm danh vào đây..."></textarea>
                 <button type="button" class="manual-attendance-submit" onclick="submitManualAttendance()">
                     <span class="material-icons-round">save</span>Ghi điểm danh vào Sheet
@@ -660,6 +676,50 @@
 
         let manualAttendanceRetryContext = { date: '', classId: '' };
 
+        function getLocalIsoDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function updateManualAttendanceTiniLink() {
+            const fromDate = document.getElementById('manualFromDate').value;
+            const toDate = document.getElementById('manualToDate').value;
+            const classId = document.getElementById('manualAttendanceClass').value;
+            const link = document.getElementById('manualAttendanceTiniLink');
+            const ready = Boolean(fromDate && toDate && classId);
+            link.classList.toggle('is-disabled', !ready);
+            link.setAttribute('aria-disabled', String(!ready));
+            link.href = ready
+                ? `https://tini.thongtinxuanloc.com/glv?phone=0857675733&date=${encodeURIComponent(fromDate)}&khoi_lop=${encodeURIComponent(classId)}&to=${encodeURIComponent(toDate)}`
+                : '#';
+        }
+
+        async function loadManualAttendanceClasses(selectedClassId = '') {
+            const select = document.getElementById('manualAttendanceClass');
+            select.disabled = true;
+            select.innerHTML = '<option value="">Đang tải lớp...</option>';
+            try {
+                const response = await fetch(api('/classes'));
+                const classes = await response.json().catch(() => null);
+                if (!response.ok || !Array.isArray(classes)) throw new Error(classes?.error || 'Không thể tải danh sách lớp');
+                select.innerHTML = '<option value="">Chọn lớp</option>' + classes.map(item =>
+                    `<option value="${escapeHtml(String(item.id || ''))}">${escapeHtml(String(item.name || item.id || 'Lớp chưa có tên'))}</option>`
+                ).join('');
+                if (selectedClassId && Array.from(select.options).some(option => option.value === String(selectedClassId))) {
+                    select.value = String(selectedClassId);
+                }
+            } catch (error) {
+                select.innerHTML = '<option value="">Chưa tải được lớp</option>';
+                showToast(error.message || 'Không thể tải danh sách lớp');
+            } finally {
+                select.disabled = false;
+                updateManualAttendanceTiniLink();
+            }
+        }
+
         function openManualAttendanceModal(date = '', classId = '') {
             manualAttendanceRetryContext = { date: String(date || ''), classId: String(classId || '') };
             const context = document.getElementById('manualAttendanceContext');
@@ -667,9 +727,13 @@
             context.textContent = manualAttendanceRetryContext.date
                 ? `Đang xử lý lại ngày ${formatAttendanceErrorDate(manualAttendanceRetryContext.date)} · ${manualAttendanceRetryContext.classId}`
                 : '';
+            const selectedDate = manualAttendanceRetryContext.date || getLocalIsoDate();
+            document.getElementById('manualFromDate').value = selectedDate;
+            document.getElementById('manualToDate').value = selectedDate;
             document.getElementById('manualAttendanceContent').value = '';
             document.getElementById('manualAttendanceResult').textContent = '';
             document.getElementById('manualAttendanceModal').classList.remove('hidden');
+            void loadManualAttendanceClasses(manualAttendanceRetryContext.classId);
             setTimeout(() => document.getElementById('manualAttendanceContent').focus(), 0);
         }
 
@@ -700,8 +764,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         content,
-                        retryDate: manualAttendanceRetryContext.date,
-                        retryClassId: manualAttendanceRetryContext.classId
+                        retryDate: manualAttendanceRetryContext.date || (document.getElementById('manualFromDate').value === document.getElementById('manualToDate').value ? document.getElementById('manualFromDate').value : ''),
+                        retryClassId: manualAttendanceRetryContext.classId || document.getElementById('manualAttendanceClass').value
                     })
                 });
                 const data = await response.json().catch(() => null);
