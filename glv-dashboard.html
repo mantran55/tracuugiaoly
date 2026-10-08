@@ -482,7 +482,7 @@
                 <h2>Nhập điểm danh thủ công</h2>
             </div>
             <div class="attendance-body">
-                <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ và Giáo lý</strong>; dòng “Khác” sẽ bỏ qua.</p>
+                <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ và Giáo lý</strong>; dòng “Khác” sẽ bỏ qua. Nếu chọn cùng một ngày ở trên, nội dung không có ngày sẽ được ghi vào ngày đó.</p>
                 <div id="manualAttendanceContext" class="manual-attendance-context" hidden></div>
                 <div class="manual-attendance-source-controls">
                     <label>Từ ngày
@@ -771,6 +771,9 @@
             const button = document.querySelector('.manual-attendance-submit');
             const result = document.getElementById('manualAttendanceResult');
             const content = input.value.trim();
+            const manualFromDate = document.getElementById('manualFromDate').value;
+            const manualToDate = document.getElementById('manualToDate').value;
+            const manualDate = manualFromDate && manualFromDate === manualToDate ? manualFromDate : '';
             if (!content) {
                 showToast('Hãy dán danh sách điểm danh trước');
                 return;
@@ -783,7 +786,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         content,
-                        retryDate: manualAttendanceRetryContext.date || (document.getElementById('manualFromDate').value === document.getElementById('manualToDate').value ? document.getElementById('manualFromDate').value : ''),
+                        manualDate,
+                        retryDate: manualAttendanceRetryContext.date || manualDate,
                         retryClassId: manualAttendanceRetryContext.classId || document.getElementById('manualAttendanceClass').value
                     })
                 });
