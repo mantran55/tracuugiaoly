@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20261007-status-loader">
+    <link rel="stylesheet" href="styles.css?v=20261008-attendance-targets">
 </head>
 
 <body class="dashboard-page">
@@ -245,6 +245,19 @@
                     <button class="btn-attention" onclick="closeMobileActions(); openAttentionModal()"><span class="material-icons-round">priority_high</span><span>Cần quan tâm</span></button>
                 </div>
 
+            </div>
+
+            <div class="attendance-targets" id="attendanceTargets" aria-label="Số buổi điểm danh cần đạt đến hiện tại">
+                <div class="attendance-target-item mass">
+                    <span class="material-icons-round">church</span>
+                    <span>Thánh Lễ cần đạt:</span>
+                    <strong id="requiredMassTarget">—</strong>
+                </div>
+                <div class="attendance-target-item catechism">
+                    <span class="material-icons-round">menu_book</span>
+                    <span>Giáo Lý cần đạt:</span>
+                    <strong id="requiredCatechismTarget">—</strong>
+                </div>
             </div>
 
             <div class="student-list-layout">
@@ -587,6 +600,7 @@
 
         */
         let allStudents = [];
+        let attendanceTargets = { mass: 0, catechism: 0 };
         let currentTableData = [];
         let pollingInterval = null;
         let todayAttendance = { present: [], absent: [] };
@@ -942,8 +956,10 @@
 
                 const data = await res.json();
                 allStudents = data.students || [];
+                attendanceTargets = data.attendanceTargets || { mass: 0, catechism: 0 };
 
                 renderStats();
+                renderAttendanceTargets();
                 loadClassFilter();
                 filterStudents();
                 renderTopStudents();
@@ -1018,6 +1034,11 @@
 
             const classes = [...new Set(allStudents.map(x => x.className))];
             document.getElementById('totalClasses').textContent = classes.length;
+        }
+
+        function renderAttendanceTargets() {
+            document.getElementById('requiredMassTarget').textContent = Number(attendanceTargets.mass || 0);
+            document.getElementById('requiredCatechismTarget').textContent = Number(attendanceTargets.catechism || 0);
         }
 
         // ============================================================

@@ -5920,7 +5920,23 @@ button.btn-attention { background:linear-gradient(135deg,#dc2626,#991b1b); color
 .class-group-row td { padding: 11px 16px !important; background: #eff6ff !important; color: #1e40af; text-align: left !important; border-bottom: 1px solid #bfdbfe !important; font-size: 13px !important; }
 .class-group-row td .material-icons-round { margin-right: 7px; vertical-align: -4px; font-size: 18px; }
 .class-group-total { margin-left: 9px; color: #64748b; font-size: 11px; font-weight: 700; }
+
+/* Mốc chuyên cần dự kiến từ đầu niên khóa đến hiện tại. */
+.attendance-targets { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 16px; padding:11px 13px; border:1px solid #dbeafe; border-radius:14px; background:linear-gradient(100deg,rgba(239,246,255,.92),rgba(255,255,255,.96)); box-shadow:0 6px 16px rgba(30,64,175,.05); }
+.attendance-target-item { display:inline-flex; align-items:center; gap:7px; min-height:32px; padding:5px 10px; border-radius:10px; color:#334155; font-size:12px; font-weight:700; }
+.attendance-target-item .material-icons-round { font-size:18px; }
+.attendance-target-item strong { display:inline-grid; place-items:center; min-width:28px; height:24px; padding:0 7px; border-radius:7px; font-size:14px; }
+.attendance-target-item.mass { background:#fff7ed; color:#9a3412; }
+.attendance-target-item.mass .material-icons-round { color:#ea580c; }
+.attendance-target-item.mass strong { background:#ffedd5; color:#c2410c; }
+.attendance-target-item.catechism { background:#eff6ff; color:#1e3a8a; }
+.attendance-target-item.catechism .material-icons-round { color:#2563eb; }
+.attendance-target-item.catechism strong { background:#dbeafe; color:#1d4ed8; }
 @media screen and (max-width: 600px) {
+    .attendance-targets { gap:7px; margin-bottom:12px; padding:8px; }
+    .attendance-target-item { flex:1 1 145px; justify-content:center; gap:5px; padding:5px 7px; font-size:10px; }
+    .attendance-target-item .material-icons-round { font-size:16px; }
+    .attendance-target-item strong { min-width:24px; height:22px; padding:0 5px; font-size:12px; }
     .student-list-name { gap: 7px; }
     .student-list-avatar { width: 30px; height: 30px; }
 }
