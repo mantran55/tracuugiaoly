@@ -5672,6 +5672,10 @@ button.btn-leave {
 .leave-type-makeup .leave-request-detail { color:#15803d; }
 .leave-type-excused .leave-request-detail { color:#b91c1c; }
 .leave-request-arrow { position:absolute; top:50%; right:7px; transform:translateY(-50%); color:#94a3b8; font-size:19px; }
+.leave-request-student-group { padding-bottom:10px; }
+.leave-request-person em { flex:0 0 auto; padding:2px 6px; border-radius:999px; background:#fee2e2; color:#b91c1c; font-size:9px; font-style:normal; font-weight:850; }
+.leave-request-details { display:grid; grid-column:1; gap:3px; margin-top:5px; }
+.leave-request-student-group .leave-request-detail { margin:0; padding:4px 7px; border-left:2px solid #fca5a5; border-radius:0 6px 6px 0; background:rgba(254,226,226,.45); }
 
 .dashboard-bootstrap-loader { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; padding:24px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); backdrop-filter:blur(10px); transition:opacity .28s ease,visibility .28s ease; }
 .dashboard-bootstrap-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }

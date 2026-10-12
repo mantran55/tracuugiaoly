@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20261008-attendance-targets">
+    <link rel="stylesheet" href="styles.css?v=20261012-leave-groups">
 </head>
 
 <body class="dashboard-page">
@@ -2982,6 +2982,40 @@
 
                 const renderLeaveType = (type, title, icon, entries) => {
                     if (!entries.length) return '';
+                    const itemHtml = type === 'excused'
+                        ? (() => {
+                            const students = new Map();
+                            entries.forEach(entry => {
+                                const key = String(entry.studentId || '');
+                                if (!students.has(key)) students.set(key, { ...entry, leaveTexts: [] });
+                                students.get(key).leaveTexts.push(entry.leaveText);
+                            });
+                            return [...students.values()].map(student => `
+                                <button type="button" class="leave-request-entry leave-request-student-group"
+                                    onclick="openLeaveEditModal('${escapeHtml(student.studentId)}')">
+                                    <span class="leave-request-person">
+                                        <strong>${escapeHtml(student.name)}</strong>
+                                        <small>Mã: ${escapeHtml(student.studentId)}</small>
+                                        ${student.leaveTexts.length > 1 ? `<em>${student.leaveTexts.length} đơn</em>` : ''}
+                                    </span>
+                                    <span class="leave-request-details">
+                                        ${student.leaveTexts.map(leaveText => `<span class="leave-request-detail">${escapeHtml(leaveText)}</span>`).join('')}
+                                    </span>
+                                    <span class="material-icons-round leave-request-arrow">chevron_right</span>
+                                </button>
+                            `).join('');
+                        })()
+                        : entries.map(entry => `
+                            <button type="button" class="leave-request-entry"
+                                onclick="openLeaveEditModal('${escapeHtml(entry.studentId)}')">
+                                <span class="leave-request-person">
+                                    <strong>${escapeHtml(entry.name)}</strong>
+                                    <small>Mã: ${escapeHtml(entry.studentId)}</small>
+                                </span>
+                                <span class="leave-request-detail">${escapeHtml(entry.leaveText)}</span>
+                                <span class="material-icons-round leave-request-arrow">chevron_right</span>
+                            </button>
+                        `).join('');
                     return `
                         <section class="leave-type-group leave-type-${type}">
                             <div class="leave-type-heading">
@@ -2990,17 +3024,7 @@
                                 <span class="leave-type-total">${entries.length}</span>
                             </div>
                             <div class="leave-type-items">
-                                ${entries.map(entry => `
-                                    <button type="button" class="leave-request-entry"
-                                        onclick="openLeaveEditModal('${escapeHtml(entry.studentId)}')">
-                                        <span class="leave-request-person">
-                                            <strong>${escapeHtml(entry.name)}</strong>
-                                            <small>Mã: ${escapeHtml(entry.studentId)}</small>
-                                        </span>
-                                        <span class="leave-request-detail">${escapeHtml(entry.leaveText)}</span>
-                                        <span class="material-icons-round leave-request-arrow">chevron_right</span>
-                                    </button>
-                                `).join('')}
+                                ${itemHtml}
                             </div>
                         </section>`;
                 };
