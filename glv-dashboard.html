@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20261012-leave-groups">
+    <link rel="stylesheet" href="styles.css?v=20261102-other-mass">
 </head>
 
 <body class="dashboard-page">
@@ -495,7 +495,7 @@
                 <h2>Nhập điểm danh thủ công</h2>
             </div>
             <div class="attendance-body">
-                <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ và Giáo lý</strong>; dòng “Khác” sẽ bỏ qua. Nếu chọn cùng một ngày ở trên, nội dung không có ngày sẽ được ghi vào ngày đó.</p>
+                <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ, Giáo lý và Khác</strong>; “Khác” được lưu như Thánh lễ. Nếu chọn cùng một ngày ở trên, nội dung không có ngày sẽ được ghi vào ngày đó.</p>
                 <div id="manualAttendanceContext" class="manual-attendance-context" hidden></div>
                 <div class="manual-attendance-source-controls">
                     <label>Từ ngày
@@ -1700,7 +1700,7 @@
                 return `
                 <tr>
                     <td><span class="date-cell">${item.date}</span></td>
-                    <td>${item.mass ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
+                    <td>${item.mass ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}${item.other ? '<span class="attendance-other-note">Khác</span>' : ''}</td>
                     <td>${item.catechism ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
                     <td>${item.adoration ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>
                     <td>${item.confession ? '<span class="check-badge yes">✓</span>' : '<span class="check-badge no">—</span>'}</td>

@@ -5677,6 +5677,9 @@ button.btn-leave {
 .leave-request-details { display:grid; grid-column:1; gap:3px; margin-top:5px; }
 .leave-request-student-group .leave-request-detail { margin:0; padding:4px 7px; border-left:2px solid #fca5a5; border-radius:0 6px 6px 0; background:rgba(254,226,226,.45); }
 
+/* CCAMS loại điểm danh "Khác" được quy đổi thành Thánh lễ, nhưng luôn minh bạch nguồn dữ liệu. */
+.attendance-other-note { display:inline-flex; align-items:center; margin:4px 0 0 5px; padding:2px 6px; border-radius:999px; background:#fff7ed; color:#c2410c; font-size:9px; font-weight:800; line-height:1.2; vertical-align:middle; }
+
 .dashboard-bootstrap-loader { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; padding:24px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); backdrop-filter:blur(10px); transition:opacity .28s ease,visibility .28s ease; }
 .dashboard-bootstrap-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }
 .dashboard-loader-card { width:min(290px,100%); display:grid; justify-items:center; gap:8px; padding:30px 24px 27px; border:1px solid rgba(37,99,235,.18); border-radius:22px; background:rgba(255,255,255,.94); box-shadow:0 20px 52px rgba(30,64,175,.16); color:#183b83; text-align:center; }
