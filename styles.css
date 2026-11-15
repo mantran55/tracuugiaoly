@@ -5680,6 +5680,36 @@ button.btn-leave {
 /* CCAMS loại điểm danh "Khác" được quy đổi thành Thánh lễ, nhưng luôn minh bạch nguồn dữ liệu. */
 .attendance-other-note { display:inline-flex; align-items:center; margin:4px 0 0 5px; padding:2px 6px; border-radius:999px; background:#fff7ed; color:#c2410c; font-size:9px; font-weight:800; line-height:1.2; vertical-align:middle; }
 
+/* Hướng dẫn thay thế lấy CCAMS tự động bằng quy trình nhập thủ công. */
+.ccams-blocked-notice-overlay { z-index:100001; padding:18px; }
+.ccams-blocked-notice { width:min(560px,100%); overflow:hidden; border:1px solid #fed7aa; border-radius:22px; background:linear-gradient(145deg,#fff7ed 0,#fff 43%); }
+.ccams-blocked-notice-icon { display:grid; place-items:center; width:54px; height:54px; margin:26px 26px 0; border-radius:16px; background:#ffedd5; color:#ea580c; }
+.ccams-blocked-notice-icon .material-icons-round { font-size:31px; }
+.ccams-blocked-notice-content { padding:13px 26px 26px; }
+.ccams-blocked-notice-label { color:#c2410c; font-size:10px; font-weight:900; letter-spacing:1px; }
+.ccams-blocked-notice h2 { margin:7px 38px 8px 0; color:#9a3412; font-size:21px; line-height:1.28; }
+.ccams-blocked-notice p { margin:0; color:#475569; font-size:13px; line-height:1.55; }
+.ccams-blocked-steps { margin-top:16px; padding:13px 14px 10px; border:1px solid #fed7aa; border-radius:13px; background:rgba(255,255,255,.82); color:#475569; font-size:12px; line-height:1.5; }
+.ccams-blocked-steps > strong { color:#9a3412; font-size:13px; }
+.ccams-blocked-steps ol { margin:7px 0 0; padding-left:20px; }
+.ccams-blocked-steps li { margin:4px 0; }
+.ccams-blocked-notice-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:9px; margin-top:18px; }
+.ccams-blocked-manual-button,.ccams-blocked-dismiss-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:0 14px; border-radius:10px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
+.ccams-blocked-manual-button { border:0; background:linear-gradient(135deg,#1d4ed8,#1e3a8a); color:#fff; box-shadow:0 6px 14px rgba(30,64,175,.22); }
+.ccams-blocked-manual-button:hover { filter:brightness(1.08); transform:translateY(-1px); }
+.ccams-blocked-manual-button .material-icons-round { font-size:18px; }
+.ccams-blocked-dismiss-button { border:1px solid #cbd5e1; background:#fff; color:#475569; }
+@media (max-width:560px) {
+  .ccams-blocked-notice-overlay { padding:12px; }
+  .ccams-blocked-notice { border-radius:18px; }
+  .ccams-blocked-notice-icon { width:45px; height:45px; margin:20px 20px 0; border-radius:13px; }
+  .ccams-blocked-notice-icon .material-icons-round { font-size:27px; }
+  .ccams-blocked-notice-content { padding:11px 20px 20px; }
+  .ccams-blocked-notice h2 { margin-right:28px; font-size:18px; }
+  .ccams-blocked-notice-actions { flex-direction:column; }
+  .ccams-blocked-manual-button,.ccams-blocked-dismiss-button { width:100%; }
+}
+
 .dashboard-bootstrap-loader { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; padding:24px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); backdrop-filter:blur(10px); transition:opacity .28s ease,visibility .28s ease; }
 .dashboard-bootstrap-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }
 .dashboard-loader-card { width:min(290px,100%); display:grid; justify-items:center; gap:8px; padding:30px 24px 27px; border:1px solid rgba(37,99,235,.18); border-radius:22px; background:rgba(255,255,255,.94); box-shadow:0 20px 52px rgba(30,64,175,.16); color:#183b83; text-align:center; }

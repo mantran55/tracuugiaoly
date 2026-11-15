@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20261102-other-mass">
+    <link rel="stylesheet" href="styles.css?v=20261115-manual-notice">
 </head>
 
 <body class="dashboard-page">
@@ -29,6 +29,35 @@
     <div class="toast" id="toast">
         <span class="material-icons-round" id="toastIcon" style="font-size:18px;">warning</span>
         <span id="toastMsg"></span>
+    </div>
+
+    <!-- Thông báo tạm thời khi CCAMS chặn truy vấn tự động từ Worker. -->
+    <div id="ccamsBlockedNotice" class="modal-overlay ccams-blocked-notice-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ccamsBlockedNoticeTitle">
+        <div class="modal-content ccams-blocked-notice">
+            <button type="button" class="modal-close" onclick="closeCCAMSBlockedNotice()" aria-label="Đóng thông báo">✕</button>
+            <div class="ccams-blocked-notice-icon"><span class="material-icons-round">warning_amber</span></div>
+            <div class="ccams-blocked-notice-content">
+                <span class="ccams-blocked-notice-label">THÔNG BÁO ĐIỂM DANH</span>
+                <h2 id="ccamsBlockedNoticeTitle">Lấy điểm danh tự động đang bị CCAMS chặn</h2>
+                <p>Nhờ Anh/Chị GLV điểm danh bằng chế độ <strong>Thủ công</strong> trong thời gian này.</p>
+                <div class="ccams-blocked-steps">
+                    <strong>Cách làm</strong>
+                    <ol>
+                        <li>Bấm <b>Lấy điểm danh</b>.</li>
+                        <li>Chọn <b>Thủ công</b> ở góc trên bên phải.</li>
+                        <li>Chọn <b>Từ ngày</b>, <b>Đến ngày</b> và <b>Lớp</b>.</li>
+                        <li>Bấm mở danh sách TINI, sao chép nội dung rồi dán vào ô nhập.</li>
+                        <li>Bấm <b>Ghi điểm danh vào Sheet</b>.</li>
+                    </ol>
+                </div>
+                <div class="ccams-blocked-notice-actions">
+                    <button type="button" class="ccams-blocked-manual-button" onclick="openManualAttendanceFromNotice()">
+                        <span class="material-icons-round">content_paste</span>Mở Thủ công
+                    </button>
+                    <button type="button" class="ccams-blocked-dismiss-button" onclick="closeCCAMSBlockedNotice()">Đã hiểu</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- HEADER -->
@@ -615,6 +644,19 @@
             document.getElementById('dashboardBootstrapLoader')?.classList.add('is-ready');
         }
 
+        function showCCAMSBlockedNotice() {
+            document.getElementById('ccamsBlockedNotice')?.classList.remove('hidden');
+        }
+
+        function closeCCAMSBlockedNotice() {
+            document.getElementById('ccamsBlockedNotice')?.classList.add('hidden');
+        }
+
+        function openManualAttendanceFromNotice() {
+            closeCCAMSBlockedNotice();
+            openManualAttendanceModal();
+        }
+
         async function syncMassStatusesInBackground() {
             try {
                 const response = await fetch(api('/sync-mass-statuses'), { method: 'POST' });
@@ -825,6 +867,8 @@
             } finally {
                 hideDashboardBootstrapLoader();
             }
+            // Hiện mỗi lần mở Dashboard để GLV không dùng nhầm chế độ CCAMS đang bị chặn.
+            setTimeout(showCCAMSBlockedNotice, 250);
             void loadTodayAttendance();
             void syncMassStatusesInBackground();
             void loadAttendanceImportErrors();
