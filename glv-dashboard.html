@@ -2652,19 +2652,59 @@
                 const permitted = dates.has(isoDate);
                 const group = mass && gl ? 'Vắng' : gl ? 'Vắng GL' : 'Các em chưa đi lễ ' + when;
                 const note = permitted ? ' (Có phép) (Vắng buổi thứ ' + dates.size + ')' : gl ? ' (Không phép)' : '';
-                groups.get(group).push('- ' + name + note);
+                groups.get(group).push('• ' + name + note);
             }
             for (const [title, names] of groups) if (names.length) lines.push('', '*' + title + '*', ...names);
             if (groups.size && [...groups.values()].every(names => !names.length)) lines.push('', 'Các em tham dự đầy đủ.');
             return lines.join('\n');
         }
 
+        function formatParentReport(text) {
+            const html = [];
+            const plain = [];
+            let inList = false;
+            for (const line of text.split('\n')) {
+                const bullet = /^[•-]\s+(.+)$/.exec(line);
+                if (bullet) {
+                    if (!inList) html.push('<ul style="list-style:disc;padding-left:1.5em;margin:0 0 .75em">');
+                    html.push('<li>' + escapeHtml(bullet[1]) + '</li>');
+                    plain.push('• ' + bullet[1]);
+                    inList = true;
+                    continue;
+                }
+                if (inList) html.push('</ul>');
+                inList = false;
+                const heading = /^\*(.+)\*$/.exec(line);
+                plain.push(heading ? heading[1] : line);
+                if (heading) html.push('<strong>' + escapeHtml(heading[1]) + '</strong>');
+                else if (line) html.push('<p>' + escapeHtml(line) + '</p>');
+            }
+            if (inList) html.push('</ul>');
+            return { html: html.join(''), plain: plain.join('\n') };
+        }
+
+        function previewParentReport() {
+            document.getElementById('parentReportPreview').innerHTML =
+                formatParentReport(document.getElementById('parentReportText').value).html;
+        }
+
         async function copyParentReport() {
             const field = document.getElementById('parentReportText');
+            const { html, plain } = formatParentReport(field.value);
             try {
-                await navigator.clipboard.writeText(field.value);
+                if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error();
+                await navigator.clipboard.write([new ClipboardItem({
+                    'text/html': new Blob([html], {type:'text/html'}),
+                    'text/plain': new Blob([plain], {type:'text/plain'})
+                })]);
                 showToast('Đã sao chép lời nhắn gửi phụ huynh', 'success');
             } catch {
+                try {
+                    await navigator.clipboard.writeText(plain);
+                    showToast('Đã sao chép lời nhắn dạng văn bản', 'success');
+                    return;
+                } catch {}
+                field.closest('details').open = true;
                 field.focus();
                 field.select();
                 showToast('Hãy chọn Sao chép để lấy lời nhắn');
@@ -2713,6 +2753,7 @@
                 await renderReportPreview(data.students, data.calendar);
                 if (!leaves.success || !Array.isArray(leaves.requests)) throw new Error('Không tải được đơn phép');
                 document.getElementById('parentReportText').value = buildParentReport(data.students, data.calendar, rawDate, leaves.requests);
+                previewParentReport();
                 document.getElementById('parentReportActions').hidden = false;
 
             } catch (err) {
@@ -3345,8 +3386,11 @@
 
                  <div id="reportPreviewImage"></div>
                  <section id="parentReportActions" hidden>
-                     <label for="parentReportText">Lời nhắn gửi phụ huynh</label>
-                     <textarea id="parentReportText" rows="8" style="width:100%;box-sizing:border-box"></textarea>
+                     <h3>Lời nhắn gửi phụ huynh</h3>
+                     <div id="parentReportPreview"></div>
+                     <details><summary>Chỉnh sửa lời nhắn</summary>
+                         <textarea id="parentReportText" aria-label="Chỉnh sửa lời nhắn" rows="8" oninput="previewParentReport()" style="width:100%;box-sizing:border-box"></textarea>
+                     </details>
                      <button type="button" onclick="downloadDailyReport()">Tải ảnh và sao chép lời nhắn</button>
                      <button type="button" onclick="copyParentReport()">Sao chép lời nhắn</button>
                  </section>
