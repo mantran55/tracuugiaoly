@@ -2687,12 +2687,28 @@
             const { html, plain } = formatParentReport(text);
             const field = document.getElementById('parentReportText');
             field.value = plain;
+            field.dataset.clipboardHtml = text.split('\n').map(line => {
+                const heading = /^\*(.+)\*$/.exec(line);
+                return heading ? '<strong>' + escapeHtml(heading[1]) + '</strong>' : escapeHtml(line);
+            }).join('<br>\n');
             field.hidden = true;
             document.getElementById('parentReportPreview').innerHTML = html;
         }
 
         async function copyParentReport() {
             const field = document.getElementById('parentReportText');
+            if (window.ClipboardItem && navigator.clipboard?.write) {
+                try {
+                    await navigator.clipboard.write([new ClipboardItem({
+                        'text/plain': new Blob([field.value], { type: 'text/plain' }),
+                        'text/html': new Blob([field.dataset.clipboardHtml], { type: 'text/html' })
+                    })]);
+                    showToast('Đã sao chép lời nhắn gửi phụ huynh', 'success');
+                    return;
+                } catch {
+                    // Một số trình duyệt chỉ cho phép sao chép văn bản thuần.
+                }
+            }
             try {
                 await navigator.clipboard.writeText(field.value);
                 showToast('Đã sao chép lời nhắn gửi phụ huynh', 'success');
