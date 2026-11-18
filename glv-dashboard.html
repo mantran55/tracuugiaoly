@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="icon" type="image/png" href="favico.png">
 
-    <link rel="stylesheet" href="styles.css?v=20261115-manual-notice">
+    <link rel="stylesheet" href="styles.css?v=parent-report-2">
 </head>
 
 <body class="dashboard-page">
@@ -2666,7 +2666,7 @@
             for (const line of text.split('\n')) {
                 const bullet = /^[•-]\s+(.+)$/.exec(line);
                 if (bullet) {
-                    if (!inList) html.push('<ul style="list-style:disc;padding-left:1.5em;margin:0 0 .75em">');
+                    if (!inList) html.push('<ul>');
                     html.push('<li>' + escapeHtml(bullet[1]) + '</li>');
                     plain.push('• ' + bullet[1]);
                     inList = true;
@@ -2683,28 +2683,21 @@
             return { html: html.join(''), plain: plain.join('\n') };
         }
 
-        function previewParentReport() {
-            document.getElementById('parentReportPreview').innerHTML =
-                formatParentReport(document.getElementById('parentReportText').value).html;
+        function previewParentReport(text) {
+            const { html, plain } = formatParentReport(text);
+            const field = document.getElementById('parentReportText');
+            field.value = plain;
+            field.hidden = true;
+            document.getElementById('parentReportPreview').innerHTML = html;
         }
 
         async function copyParentReport() {
             const field = document.getElementById('parentReportText');
-            const { html, plain } = formatParentReport(field.value);
             try {
-                if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error();
-                await navigator.clipboard.write([new ClipboardItem({
-                    'text/html': new Blob([html], {type:'text/html'}),
-                    'text/plain': new Blob([plain], {type:'text/plain'})
-                })]);
+                await navigator.clipboard.writeText(field.value);
                 showToast('Đã sao chép lời nhắn gửi phụ huynh', 'success');
             } catch {
-                try {
-                    await navigator.clipboard.writeText(plain);
-                    showToast('Đã sao chép lời nhắn dạng văn bản', 'success');
-                    return;
-                } catch {}
-                field.closest('details').open = true;
+                field.hidden = false;
                 field.focus();
                 field.select();
                 showToast('Hãy chọn Sao chép để lấy lời nhắn');
@@ -2752,8 +2745,7 @@
 
                 await renderReportPreview(data.students, data.calendar);
                 if (!leaves.success || !Array.isArray(leaves.requests)) throw new Error('Không tải được đơn phép');
-                document.getElementById('parentReportText').value = buildParentReport(data.students, data.calendar, rawDate, leaves.requests);
-                previewParentReport();
+                previewParentReport(buildParentReport(data.students, data.calendar, rawDate, leaves.requests));
                 document.getElementById('parentReportActions').hidden = false;
 
             } catch (err) {
@@ -2983,16 +2975,6 @@
             } finally {
                 printable.remove();
             }
-        }
-
-        function downloadDailyReport() {
-            const image = document.querySelector('#reportPreviewImage img');
-            if (!image) return;
-            void copyParentReport();
-            const link = document.createElement('a');
-            link.download = 'BaoCaoHienDien-' + document.getElementById('reportDate').value + '.png';
-            link.href = image.src;
-            link.click();
         }
 
         function escapeHtml(value) {
@@ -3388,10 +3370,7 @@
                  <section id="parentReportActions" hidden>
                      <h3>Lời nhắn gửi phụ huynh</h3>
                      <div id="parentReportPreview"></div>
-                     <details><summary>Chỉnh sửa lời nhắn</summary>
-                         <textarea id="parentReportText" aria-label="Chỉnh sửa lời nhắn" rows="8" oninput="previewParentReport()" style="width:100%;box-sizing:border-box"></textarea>
-                     </details>
-                     <button type="button" onclick="downloadDailyReport()">Tải ảnh và sao chép lời nhắn</button>
+                     <textarea id="parentReportText" aria-label="Lời nhắn để sao chép" rows="8" readonly hidden></textarea>
                      <button type="button" onclick="copyParentReport()">Sao chép lời nhắn</button>
                  </section>
 
