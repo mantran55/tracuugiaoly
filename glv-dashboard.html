@@ -2013,8 +2013,7 @@
                         <div style="margin-top:6px;font-size:16px;">Ngày ${displayDate}</div>
                         <div style="margin-top:22px;padding:16px;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:17px;font-weight:700;">${escapeHtml(calendar?.note || 'Không có lịch điểm danh trong ngày này.')}</div>
                     </div>`;
-                createPreviewImage();
-                return;
+                return createPreviewImage();
             }
 
             const isMassAbsent = student => massRequired && !student.tl;
@@ -2171,7 +2170,7 @@
 
             `;
 
-            createPreviewImage();
+            return createPreviewImage();
         }
         
         async function createPreviewImage(){
@@ -2440,7 +2439,8 @@
         
         function openReportModal() {
 
-            const today = new Date().toISOString().split('T')[0];
+            clearDailyReport();
+            const today = getLocalIsoDate();
 
             document.getElementById('reportDate').value = today;
 
@@ -2616,6 +2616,61 @@
        
         let isGeneratingDailyReport = false;
 
+        function clearDailyReport() {
+            document.getElementById('reportPreviewImage').replaceChildren();
+            document.getElementById('parentReportActions').hidden = true;
+            document.getElementById('parentReportText').value = '';
+        }
+
+        function buildParentReport(students, calendar, isoDate, requests) {
+            const when = isoDate === getLocalIsoDate() ? 'hôm nay' : 'ngày ' + isoDate.split('-').reverse().join('/');
+            const activities = [calendar.massRequired && 'Thánh Lễ sáng', calendar.catechismRequired && 'Giáo lý'].filter(Boolean);
+            if (!activities.length) return 'Dạ con gửi thông tin ' + when + ' @All\n' + (calendar.note || 'Không có lịch điểm danh.');
+            const lines = ['Dạ con gửi danh sách các em tham dự ' + activities.join(' + ') + ' ' + when + ' @All'];
+            if (calendar.note) lines.push(calendar.note);
+            const groups = new Map([['Vắng', []], ['Vắng GL', []], ['Các em chưa đi lễ ' + when, []]]);
+            const leaves = new Map(requests.map(r => [String(r.studentId), r.leaveItems || []]));
+            const shortName = s => String(s.name).trim().split(/\s+/).slice(-2).join(' ');
+            const usedNames = new Set(), duplicates = new Set();
+            for (const s of students) {
+                const name = shortName(s);
+                if (usedNames.has(name)) duplicates.add(name);
+                usedNames.add(name);
+            }
+            for (const s of students) {
+                const mass = calendar.massRequired && !s.tl, gl = calendar.catechismRequired && !s.gl;
+                if (!mass && !gl) continue;
+                const name = duplicates.has(shortName(s)) ? s.name : shortName(s);
+                const dates = new Set();
+                for (const item of leaves.get(String(s.studentId)) || []) {
+                    const match = /^Vắng có phép ngày\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/i.exec(item.trim());
+                    if (match) {
+                        const date = match[3] + '-' + match[2].padStart(2,'0') + '-' + match[1].padStart(2,'0');
+                        if (date <= isoDate) dates.add(date);
+                    }
+                }
+                const permitted = dates.has(isoDate);
+                const group = mass && gl ? 'Vắng' : gl ? 'Vắng GL' : 'Các em chưa đi lễ ' + when;
+                const note = permitted ? ' (Có phép) (Vắng buổi thứ ' + dates.size + ')' : gl ? ' (Không phép)' : '';
+                groups.get(group).push('- ' + name + note);
+            }
+            for (const [title, names] of groups) if (names.length) lines.push('', '*' + title + '*', ...names);
+            if (groups.size && [...groups.values()].every(names => !names.length)) lines.push('', 'Các em tham dự đầy đủ.');
+            return lines.join('\n');
+        }
+
+        async function copyParentReport() {
+            const field = document.getElementById('parentReportText');
+            try {
+                await navigator.clipboard.writeText(field.value);
+                showToast('Đã sao chép lời nhắn gửi phụ huynh', 'success');
+            } catch {
+                field.focus();
+                field.select();
+                showToast('Hãy chọn Sao chép để lấy lời nhắn');
+            }
+        }
+
         async function generateReport() {
             if (isGeneratingDailyReport) return;
 
@@ -2632,6 +2687,9 @@
 
             const button = document.getElementById('generateDailyReportButton');
             isGeneratingDailyReport = true;
+            clearDailyReport();
+            const controls = ['reportDate','reportClass'].map(id => document.getElementById(id));
+            controls.forEach(control => control.disabled = true);
             button.disabled = true;
             button.textContent = 'Đang tạo báo cáo...';
 
@@ -2642,22 +2700,20 @@
 
             try {
 
-                const res = await fetch(
-                    api(`/attendance-report?date=${encodeURIComponent(date)}&className=${encodeURIComponent(className)}`)
-                );
-
-                const data = await res.json();
-
-                console.log(data);
+                const [data, leaves] = await Promise.all([
+                    fetch(api(`/attendance-report?date=${encodeURIComponent(date)}&dateIso=${rawDate}&className=${encodeURIComponent(className)}`)).then(r => r.json()),
+                    fetch(api('/leave-requests')).then(r => r.json())
+                ]);
 
                 if (!data.success) {
                     alert('Không lấy được dữ liệu');
                     return;
                 }
 
-                renderReportPreview(data.students);
-
-                // await exportReportImage();
+                await renderReportPreview(data.students, data.calendar);
+                if (!leaves.success || !Array.isArray(leaves.requests)) throw new Error('Không tải được đơn phép');
+                document.getElementById('parentReportText').value = buildParentReport(data.students, data.calendar, rawDate, leaves.requests);
+                document.getElementById('parentReportActions').hidden = false;
 
             } catch (err) {
 
@@ -2666,6 +2722,7 @@
 
             } finally {
                 isGeneratingDailyReport = false;
+                controls.forEach(control => control.disabled = false);
                 button.disabled = false;
                 button.textContent = 'Tạo báo cáo';
             }
@@ -2887,28 +2944,13 @@
             }
         }
 
-        async function exportReportImage(){
-
-            const element =
-                document.getElementById(
-                    'reportRenderContainer'
-                );
-
-            const canvas = await html2canvas(element,{
-                scale:2,
-                useCORS:true,
-                logging:false
-            });
-
-            const link =
-                document.createElement('a');
-
-            link.download =
-                'BaoCaoHienDien.png';
-
-            link.href =
-                canvas.toDataURL('image/png');
-
+        function downloadDailyReport() {
+            const image = document.querySelector('#reportPreviewImage img');
+            if (!image) return;
+            void copyParentReport();
+            const link = document.createElement('a');
+            link.download = 'BaoCaoHienDien-' + document.getElementById('reportDate').value + '.png';
+            link.href = image.src;
             link.click();
         }
 
@@ -3292,16 +3334,22 @@
 
                 <label>Ngày</label>
                 <input type="date"
-                    id="reportDate">
+                    id="reportDate" onchange="clearDailyReport()">
 
                 <label>Lớp</label>
-                <select id="reportClass"></select>
+                <select id="reportClass" onchange="clearDailyReport()"></select>
 
                 <button id="generateDailyReportButton" class="report-generate-button" onclick="generateReport()">
                     Tạo báo cáo
                 </button>
 
                  <div id="reportPreviewImage"></div>
+                 <section id="parentReportActions" hidden>
+                     <label for="parentReportText">Lời nhắn gửi phụ huynh</label>
+                     <textarea id="parentReportText" rows="8" style="width:100%;box-sizing:border-box"></textarea>
+                     <button type="button" onclick="downloadDailyReport()">Tải ảnh và sao chép lời nhắn</button>
+                     <button type="button" onclick="copyParentReport()">Sao chép lời nhắn</button>
+                 </section>
 
             </div>
 
