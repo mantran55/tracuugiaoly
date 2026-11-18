@@ -6278,3 +6278,19 @@ body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-s
         font-size:15px;
     }
 }
+#parentReportActions {
+    margin-top: 18px;
+    padding: clamp(14px, 3vw, 22px);
+    border: 1px solid #dbe5f4;
+    border-radius: 16px;
+    background: #f8faff;
+    color: #263751;
+}
+#parentReportActions h3 { margin: 0 0 12px; font-size: 17px; color: #193b79; }
+#parentReportPreview { padding: 14px 16px; background: white; border-radius: 10px; line-height: 1.55; overflow-wrap: anywhere; }
+#parentReportPreview p { margin: 0 0 8px; }
+#parentReportPreview strong { display: block; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e6ebf2; }
+#parentReportPreview ul { list-style: disc; margin: 4px 0 0; padding-left: 1.35em; }
+#parentReportPreview li::marker { color: #5277aa; }
+#parentReportActions button { display: block; margin: 14px 0 0 auto; }
+#parentReportText[hidden] { display: none; }
