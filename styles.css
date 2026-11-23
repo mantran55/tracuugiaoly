@@ -6288,8 +6288,8 @@ body.index-page .student-leave-remaining { margin-top:8px; color:#dc2626; font-s
 }
 #parentReportActions h3 { margin: 0 0 12px; font-size: 17px; color: #193b79; }
 #noticeAbsences:not(:empty) { max-height: 36vh; overflow: auto; margin-bottom: 14px; }
-.notice-absence { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 5px 12px; padding: 8px 2px; border-bottom: 1px solid #dbe5f4; font-size: 13px; }
-.notice-absence > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.notice-absence { display: grid; gap: 4px; padding: 7px 2px; border-bottom: 1px solid #dbe5f4; font-size: 13px; }
+.notice-absence > div { display: grid; grid-template-columns: 5.5em 7.5em 1fr; align-items: center; gap: 4px; }
 #noticeAbsences label { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-size: 12px; }
 #noticeAbsences input[type=checkbox] { width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; }
 #parentReportPreview { padding: 14px 16px; background: white; border-radius: 10px; line-height: 1.55; overflow-wrap: anywhere; }

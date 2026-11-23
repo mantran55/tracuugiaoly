@@ -2664,9 +2664,10 @@
                 }
                 const id = String(s.studentId);
                 const saved = dates.has(isoDate);
-                const permitted = choices.get(id) ?? saved;
+                const permitted = choices.get(id) ?? false;
                 const group = mass && gl ? 'Vắng' : gl ? 'Vắng GL' : 'Các em chưa đi lễ ' + when;
-                const note = permitted ? ' (Có phép)' + (saved ? ' (Vắng buổi thứ ' + dates.size + ')' : '') : ' (Không phép)';
+                const note = (permitted ? ' (Có phép)' : ' (Không phép)') +
+                    (saved ? ' Vắng buổi ' + dates.size : '');
                 groups.get(group).push('• ' + name + note);
                 const input = (action, label, checked, disabled = false) =>
                     `<label><input type="checkbox" data-action="${action}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}> ${label}</label>`;
@@ -2708,7 +2709,6 @@
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tạo đơn');
                 report.leaves.set(id, data.leave.split(/\s*;\s*/));
-                report.choices.set(id, true);
                 showToast('Đã lưu đơn vắng có phép', 'success');
             } catch (err) {
                 showToast(err.message);
@@ -3446,8 +3446,8 @@
 
                  <div id="reportPreviewImage"></div>
                  <section id="parentReportActions" hidden>
-                     <h3>Thông báo TL-GL</h3>
                      <div id="noticeAbsences" onchange="changeNoticeAbsence(event)"></div>
+                     <h3>Thông báo TL-GL</h3>
                      <div id="parentReportPreview"></div>
                      <textarea id="parentReportText" aria-label="Lời nhắn để sao chép" rows="8" readonly hidden></textarea>
                      <button type="button" onclick="copyParentReport()">Sao chép lời nhắn</button>
