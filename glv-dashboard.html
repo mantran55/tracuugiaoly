@@ -2625,21 +2625,23 @@
         }
        
         let isGeneratingDailyReport = false;
+        let dailyNotice = null;
 
         function clearDailyReport() {
+            dailyNotice = null;
             document.getElementById('reportPreviewImage').replaceChildren();
             document.getElementById('parentReportActions').hidden = true;
             document.getElementById('parentReportText').value = '';
         }
 
-        function buildParentReport(students, calendar, isoDate, requests) {
+        function buildParentReport(report) {
+            const { students, calendar, isoDate, leaves, choices } = report;
             const when = isoDate === getLocalIsoDate() ? 'hôm nay' : 'ngày ' + isoDate.split('-').reverse().join('/');
             const activities = [calendar.massRequired && 'Thánh Lễ sáng', calendar.catechismRequired && 'Giáo lý'].filter(Boolean);
             if (!activities.length) return 'Dạ con gửi thông tin ' + when + ' @All\n' + (calendar.note || 'Không có lịch điểm danh.');
             const lines = ['Dạ con gửi danh sách các em tham dự ' + activities.join(' + ') + ' ' + when + ' @All'];
             if (calendar.note) lines.push(calendar.note);
             const groups = new Map([['Vắng', []], ['Vắng GL', []], ['Các em chưa đi lễ ' + when, []]]);
-            const leaves = new Map(requests.map(r => [String(r.studentId), r.leaveItems || []]));
             const shortName = s => String(s.name).trim().split(/\s+/).slice(-2).join(' ');
             const usedNames = new Set(), duplicates = new Set();
             for (const s of students) {
@@ -2647,6 +2649,7 @@
                 if (usedNames.has(name)) duplicates.add(name);
                 usedNames.add(name);
             }
+            const editors = [];
             for (const s of students) {
                 const mass = calendar.massRequired && !s.tl, gl = calendar.catechismRequired && !s.gl;
                 if (!mass && !gl) continue;
@@ -2659,14 +2662,60 @@
                         if (date <= isoDate) dates.add(date);
                     }
                 }
-                const permitted = dates.has(isoDate);
+                const id = String(s.studentId);
+                const saved = dates.has(isoDate);
+                const permitted = choices.get(id) ?? saved;
                 const group = mass && gl ? 'Vắng' : gl ? 'Vắng GL' : 'Các em chưa đi lễ ' + when;
-                const note = permitted ? ' (Có phép) (Vắng buổi thứ ' + dates.size + ')' : gl ? ' (Không phép)' : '';
+                const note = permitted ? ' (Có phép)' + (saved ? ' (Vắng buổi thứ ' + dates.size + ')' : '') : ' (Không phép)';
                 groups.get(group).push('• ' + name + note);
+                const input = (action, label, checked, disabled = false) =>
+                    `<label><input type="checkbox" data-action="${action}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}> ${label}</label>`;
+                editors.push(`<div class="notice-absence" data-id="${escapeHtml(id)}"><strong>${escapeHtml(s.name)}</strong><div>
+                    ${input('yes','Có phép',permitted)} ${input('no','Không phép',!permitted)}
+                    ${input('create',saved ? 'Đã tạo đơn' : 'Tạo đơn',saved,saved || report.pending.has(id))}
+                </div></div>`);
             }
             for (const [title, names] of groups) if (names.length) lines.push('', '*' + title + '*', ...names);
+            document.getElementById('noticeAbsences').innerHTML = editors.join('');
             if (groups.size && [...groups.values()].every(names => !names.length)) lines.push('', 'Các em tham dự đầy đủ.');
             return lines.join('\n');
+        }
+
+        function refreshDailyNotice() {
+            document.getElementById('noticeAbsences').replaceChildren();
+            previewParentReport(buildParentReport(dailyNotice));
+        }
+
+        async function changeNoticeAbsence(event) {
+            const input = event.target;
+            const action = input.dataset.action;
+            const report = dailyNotice;
+            if (!action || !report) return;
+            const id = input.closest('[data-id]').dataset.id;
+            if (action !== 'create') {
+                report.choices.set(id, action === 'yes');
+                refreshDailyNotice();
+                return;
+            }
+            if (report.pending.has(id)) return;
+            report.pending.add(id);
+            input.disabled = true;
+            try {
+                const response = await fetch(api('/leave-requests'), {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentId: id, type: 'excused', absenceDate: report.isoDate })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || data.error || 'Không thể tạo đơn');
+                report.leaves.set(id, data.leave.split(/\s*;\s*/));
+                report.choices.set(id, true);
+                showToast('Đã lưu đơn vắng có phép', 'success');
+            } catch (err) {
+                showToast(err.message);
+            } finally {
+                report.pending.delete(id);
+                if (dailyNotice === report) refreshDailyNotice();
+            }
         }
 
         function formatParentReport(text) {
@@ -2771,7 +2820,10 @@
 
                 await renderReportPreview(data.students, data.calendar);
                 if (!leaves.success || !Array.isArray(leaves.requests)) throw new Error('Không tải được đơn phép');
-                previewParentReport(buildParentReport(data.students, data.calendar, rawDate, leaves.requests));
+                dailyNotice = { students: data.students, calendar: data.calendar, isoDate: rawDate,
+                    choices: new Map(), pending: new Set(),
+                    leaves: new Map(leaves.requests.map(r => [String(r.studentId), r.leaveItems || []])) };
+                refreshDailyNotice();
                 document.getElementById('parentReportActions').hidden = false;
 
             } catch (err) {
@@ -3394,7 +3446,8 @@
 
                  <div id="reportPreviewImage"></div>
                  <section id="parentReportActions" hidden>
-                     <h3>Lời nhắn gửi phụ huynh</h3>
+                     <h3>Thông báo TL-GL</h3>
+                     <div id="noticeAbsences" onchange="changeNoticeAbsence(event)"></div>
                      <div id="parentReportPreview"></div>
                      <textarea id="parentReportText" aria-label="Lời nhắn để sao chép" rows="8" readonly hidden></textarea>
                      <button type="button" onclick="copyParentReport()">Sao chép lời nhắn</button>
