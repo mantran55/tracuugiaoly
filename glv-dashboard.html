@@ -2667,7 +2667,7 @@
                 const permitted = choices.get(id) ?? false;
                 const group = mass && gl ? 'Vắng' : gl ? 'Vắng GL' : 'Các em chưa đi lễ ' + when;
                 const note = (permitted ? ' (Có phép)' : ' (Không phép)') +
-                    (saved ? ' Vắng buổi ' + dates.size : '');
+                    (Number.isInteger(s.absenceDays) ? ' Vắng buổi ' + s.absenceDays : '');
                 groups.get(group).push('• ' + name + note);
                 const input = (action, label, checked, disabled = false) =>
                     `<label><input type="checkbox" data-action="${action}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}> ${label}</label>`;
@@ -2818,9 +2818,10 @@
                     return;
                 }
 
-                await renderReportPreview(data.students, data.calendar);
+                const students = data.students.filter(s => !/^nghi\b/.test(normalizeText(s.status).trim()));
+                await renderReportPreview(students, data.calendar);
                 if (!leaves.success || !Array.isArray(leaves.requests)) throw new Error('Không tải được đơn phép');
-                dailyNotice = { students: data.students, calendar: data.calendar, isoDate: rawDate,
+                dailyNotice = { students, calendar: data.calendar, isoDate: rawDate,
                     choices: new Map(), pending: new Set(),
                     leaves: new Map(leaves.requests.map(r => [String(r.studentId), r.leaveItems || []])) };
                 refreshDailyNotice();
