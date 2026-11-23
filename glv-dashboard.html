@@ -526,6 +526,7 @@
             <div class="attendance-body">
                 <p class="manual-attendance-help">Dán danh sách từ TINI. Hệ thống chỉ lấy <strong>mã học viên, ngày, Thánh lễ, Giáo lý và Khác</strong>; “Khác” được lưu như Thánh lễ. Nếu chọn cùng một ngày ở trên, nội dung không có ngày sẽ được ghi vào ngày đó.</p>
                 <div id="manualAttendanceContext" class="manual-attendance-context" hidden></div>
+                <p>Dán đủ danh sách của lớp. Với mỗi ngày có dữ liệu khớp, điểm TL/GL sẽ được ghi lại; em không có tên sẽ được xóa điểm TL/GL của ngày đó.</p>
                 <div class="manual-attendance-source-controls">
                     <label>Từ ngày
                         <input type="date" id="manualFromDate" onchange="updateManualAttendanceTiniLink()">
@@ -830,6 +831,11 @@
             const manualFromDate = document.getElementById('manualFromDate').value;
             const manualToDate = document.getElementById('manualToDate').value;
             const manualDate = manualFromDate && manualFromDate === manualToDate ? manualFromDate : '';
+            const selectedClass = document.getElementById('manualAttendanceClass').selectedOptions[0];
+            if (!selectedClass?.value || !manualFromDate || !manualToDate || manualFromDate > manualToDate) {
+                showToast('Hãy chọn lớp và khoảng ngày hợp lệ');
+                return;
+            }
             if (!content) {
                 showToast('Hãy dán danh sách điểm danh trước');
                 return;
@@ -843,13 +849,17 @@
                     body: JSON.stringify({
                         content,
                         manualDate,
+                        classId: selectedClass.value,
+                        className: selectedClass.textContent.trim(),
+                        fromDate: manualFromDate,
+                        toDate: manualToDate,
                         retryDate: manualAttendanceRetryContext.date || manualDate,
                         retryClassId: manualAttendanceRetryContext.classId || document.getElementById('manualAttendanceClass').value
                     })
                 });
                 const data = await response.json().catch(() => null);
                 if (!response.ok || !data?.success) throw new Error(data?.error || 'Không thể ghi điểm danh thủ công');
-                result.textContent = `Đã ghi ${data.updated} lượt từ ${data.parsed} dòng nhận diện${data.skipped ? ` · bỏ qua ${data.skipped} dòng không khớp` : ''}.`;
+                result.textContent = `Đã cập nhật ${data.updated} ô, trong đó xóa điểm TL/GL cũ ở ${data.cleared || 0} ô.`;
                 input.value = '';
                 await Promise.all([loadStudents(), loadTodayAttendance(), loadAttendanceImportErrors()]);
             } catch (error) {
